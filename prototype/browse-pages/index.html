@@ -1,0 +1,412 @@
+<!doctype html>
+<!--
+  PROTOTYPE, throwaway. Answers "What do the public browse pages look like?" (issue #19).
+  Three structurally different public UIs, switchable via ?variant=A|B|C (bottom bar, or ← →):
+    A  Pages:     PRD drill-down. Search → Skater page (Season tabs → Competitions → Segments) / Piece page → Performance page
+    B  Dashboard: one screen. Search rail | dense table of the Skater's or Piece's Performances | Performance panel with the video
+    C  Programs:  organised by Program (music belongs to the Program). Season timeline of Program cards; each card's
+                  Performances are video tiles that play inside the card
+  Shared across variants: search rules, the click-to-load video slot, music lines with match grades, R2 entry points.
+  Theme is deliberately neutral: palette and fonts are decided later (map fog "UI theme"). Judge layout and density only.
+  DATA is real but rough: Performances from EN Wikipedia results tables (ISU-looking events, some only as overall
+  placements), music from the music-normaliser prototype, videos = official ISU uploads Jan–Oct 2026 matched by name.
+  Stand-ins (marked DEMO in the code): the untimed stream videos and the geo-block, because the sample has none.
+  Build: python3 fetch_videos.py <.env>; python3 build.py <music-normaliser cache> <results.json>. Run: open this file.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Browse pages (PROTOTYPE)</title>
+<style>
+  :root { --bg:#fafafa; --panel:#fff; --fg:#18181b; --mut:#71717a; --line:#e4e4e7; --soft:#f4f4f5; --acc:#2563eb; --accsoft:#dbeafe; --ok:#15803d; --warn:#b45309; }
+  :root[data-theme="dark"] { --bg:#09090b; --panel:#18181b; --fg:#fafafa; --mut:#a1a1aa; --line:#27272a; --soft:#202024; --acc:#60a5fa; --accsoft:#1e3a5f; --ok:#4ade80; --warn:#fbbf24; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.45 system-ui, sans-serif; background:var(--bg); color:var(--fg); padding-bottom:70px; }
+  a { color:var(--acc); text-decoration:none; } a:hover { text-decoration:underline; }
+  button { font:inherit; color:inherit; background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:4px 10px; cursor:pointer; }
+  button:disabled { opacity:.55; cursor:not-allowed; }
+  input[type=search] { font:inherit; color:inherit; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:9px 12px; width:100%; }
+  .mut { color:var(--mut); } .small { font-size:12px; } .tiny { font-size:11px; }
+  .top { display:flex; align-items:center; gap:14px; padding:10px 16px; border-bottom:1px solid var(--line); background:var(--panel); position:sticky; top:0; z-index:5; }
+  .logo { font-weight:700; letter-spacing:-.02em; color:var(--fg); } .top .grow { flex:1; max-width:520px; position:relative; }
+  footer { padding:24px 16px; color:var(--mut); font-size:12px; border-top:1px solid var(--line); margin-top:40px; }
+  footer a { color:var(--mut); margin-right:12px; }
+  /* search results */
+  .drop { position:absolute; left:0; right:0; top:calc(100% + 4px); background:var(--panel); border:1px solid var(--line); border-radius:8px; box-shadow:0 10px 30px #0003; max-height:70vh; overflow:auto; z-index:9; }
+  .grp { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--mut); padding:8px 12px 2px; }
+  .hit { display:block; padding:6px 12px; color:var(--fg); } .hit:hover, .hit.on { background:var(--soft); text-decoration:none; }
+  .rule { padding:6px 12px; font-size:11px; color:var(--mut); border-top:1px solid var(--line); }
+  /* grade badges */
+  .g { font-size:10.5px; padding:0 6px; border-radius:8px; white-space:nowrap; border:1px solid; vertical-align:1px; }
+  .g-identified { color:var(--ok); border-color:var(--ok); }
+  .g-credited { color:var(--mut); border-color:var(--mut); }
+  .g-title { color:var(--warn); border-color:var(--warn); border-style:dashed; }
+  .music .line { margin:2px 0; } .piece { font-weight:500; }
+  .raw { font-size:12px; color:var(--mut); margin-top:4px; }
+  /* video slot */
+  .yt { position:relative; aspect-ratio:16/9; background:#0f0f0f; color:#eee; border-radius:8px; overflow:hidden; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; cursor:pointer; text-align:center; padding:12px; }
+  .yt iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
+  .yt .play { width:68px; height:48px; } .yt:hover .play rect { fill:#f00; }
+  .yt .ttl { font-size:13px; max-width:90%; } .yt .note { font-size:11px; color:#aaa; max-width:90%; }
+  .yt.none { cursor:default; background:var(--soft); color:var(--fg); border:1px dashed var(--line); }
+  .yt.none .note { color:var(--mut); }
+  .alts { margin:6px 0 0; padding:0; list-style:none; font-size:12px; }
+  .alts li { display:flex; gap:6px; align-items:center; padding:2px 0; } .alts li.cur { font-weight:600; }
+  .alts .tag { font-size:10.5px; padding:0 5px; border-radius:5px; background:var(--soft); color:var(--mut); }
+  .r2 { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; } .r2 button { font-size:12px; }
+  .r2 button::after { content:" · R2"; color:var(--mut); font-size:10.5px; }
+  .ico { font-size:12px; } .vid-yes { color:var(--acc); } .vid-no { color:var(--mut); }
+  .approx { color:var(--mut); } .legend { font-size:11px; color:var(--mut); margin:8px 0; }
+
+  /* ---------- A: pages ---------- */
+  .A main { max-width:960px; margin:0 auto; padding:20px 16px; }
+  .A .hero { text-align:center; padding:70px 0 30px; } .A .hero h1 { font-size:30px; letter-spacing:-.03em; margin:0 0 6px; }
+  .A .hero .grow { max-width:560px; margin:22px auto 10px; position:relative; text-align:left; } .A .hero input { font-size:17px; padding:13px 16px; }
+  .A .chips a { display:inline-block; margin:4px; padding:3px 10px; border:1px solid var(--line); border-radius:14px; color:var(--fg); font-size:13px; }
+  .A h1.name { margin:4px 0 2px; font-size:26px; letter-spacing:-.02em; }
+  .A .tabs { display:flex; gap:4px; flex-wrap:wrap; margin:16px 0; } .A .tabs a { padding:4px 10px; border-radius:6px; color:var(--fg); border:1px solid var(--line); font-size:13px; }
+  .A .tabs a.on { background:var(--fg); color:var(--bg); border-color:var(--fg); }
+  .A .comp { border:1px solid var(--line); border-radius:10px; background:var(--panel); margin:10px 0; }
+  .A .comp h3 { margin:0; padding:10px 14px; font-size:15px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; gap:8px; }
+  .A .segrow { display:grid; grid-template-columns:130px 70px 1fr 110px; gap:10px; padding:9px 14px; align-items:start; color:var(--fg); border-top:1px solid var(--line); }
+  .A .segrow:first-of-type { border-top:0; } .A .segrow:hover { background:var(--soft); text-decoration:none; }
+  .A .perf { display:grid; grid-template-columns:1fr 300px; gap:24px; } .A .perf aside { font-size:13px; }
+  .A .card { border:1px solid var(--line); border-radius:10px; background:var(--panel); padding:12px 14px; margin:10px 0; }
+  .A .crumb { font-size:13px; color:var(--mut); }
+  .A .skl { margin:8px 0; border:1px solid var(--line); border-radius:10px; background:var(--panel); }
+  .A .skl summary { padding:10px 14px; cursor:pointer; display:flex; justify-content:space-between; }
+  .A .skl .inner { padding:0 14px 10px; }
+  @media (max-width:760px) { .A .perf { grid-template-columns:1fr; } .A .segrow { grid-template-columns:1fr 60px; } .A .segrow .m, .A .segrow .v { grid-column:1 / -1; } }
+
+  /* ---------- B: dashboard ---------- */
+  .B .dash { display:grid; grid-template-columns:260px minmax(0,1fr) 400px; height:calc(100vh - 51px); }
+  .B .rail { border-right:1px solid var(--line); background:var(--panel); padding:10px; overflow:auto; }
+  .B .rail .hit { border-radius:6px; padding:5px 8px; } .B .rail .grp { padding:10px 8px 2px; }
+  .B .center { overflow:auto; padding:14px 18px; } .B .right { border-left:1px solid var(--line); background:var(--panel); overflow:auto; padding:14px; }
+  .B .kpis { display:flex; gap:10px; margin:10px 0 14px; flex-wrap:wrap; } .B .kpi { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:8px 12px; min-width:110px; }
+  .B .kpi b { display:block; font-size:20px; letter-spacing:-.02em; } .B .kpi span { font-size:11px; color:var(--mut); text-transform:uppercase; letter-spacing:.04em; }
+  .B table { border-collapse:collapse; width:100%; font-size:13px; font-variant-numeric:tabular-nums; }
+  .B th { position:sticky; top:-14px; background:var(--bg); text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--mut); padding:6px; border-bottom:1px solid var(--line); }
+  .B td:first-child { white-space:nowrap; } .B td { padding:5px 6px; border-bottom:1px solid var(--line); vertical-align:top; }
+  .B tr.row { cursor:pointer; } .B tr.row:hover td { background:var(--soft); } .B tr.sel td { background:var(--accsoft); }
+  .B tr.season td { font-weight:600; background:var(--soft); position:sticky; top:14px; }
+  .B .filters { display:flex; gap:8px; align-items:center; font-size:12px; margin-bottom:8px; }
+  .B .right h2 { font-size:16px; margin:0 0 2px; } .B .right section { margin-top:14px; } .B .right h4 { font-size:11px; text-transform:uppercase; color:var(--mut); margin:0 0 4px; letter-spacing:.05em; }
+  .B .empty { color:var(--mut); padding:40px 10px; text-align:center; }
+  @media (max-width:1100px) { .B .dash { grid-template-columns:220px 1fr; height:auto; } .B .right { grid-column:1 / -1; border-left:0; border-top:1px solid var(--line); } }
+  @media (max-width:700px) { .B .dash { grid-template-columns:1fr; } }
+
+  /* ---------- C: programs ---------- */
+  .C main { max-width:1100px; margin:0 auto; padding:20px 16px; }
+  .C .hero { padding:40px 0 20px; } .C .hero h1 { font-size:24px; margin:0 0 12px; } .C .hero .grow { position:relative; max-width:640px; }
+  .C .pop { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:8px; margin-top:24px; }
+  .C .pop a { border:1px solid var(--line); border-radius:8px; padding:8px 10px; background:var(--panel); color:var(--fg); }
+  .C .season { display:grid; grid-template-columns:90px 1fr; gap:16px; margin:18px 0; }
+  .C .season > h2 { font-size:15px; margin:12px 0 0; position:sticky; top:62px; align-self:start; color:var(--mut); }
+  .C .progs { display:grid; grid-template-columns:repeat(auto-fit,minmax(380px,1fr)); gap:12px; }
+  .C .prog { border:1px solid var(--line); border-radius:12px; background:var(--panel); padding:12px 14px; }
+  .C .prog h3 { margin:0 0 6px; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--mut); display:flex; justify-content:space-between; }
+  .C .tiles { display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; }
+  .C .tile { border:1px solid var(--line); border-radius:8px; padding:5px 8px; font-size:12px; background:var(--bg); cursor:pointer; min-width:120px; text-align:left; }
+  .C .tile.on { border-color:var(--acc); box-shadow:0 0 0 1px var(--acc); } .C .tile.novid { border-style:dashed; color:var(--mut); }
+  .C .stage { margin-top:10px; }
+  .C .who { font-size:16px; font-weight:600; margin:20px 0 6px; }
+  @media (max-width:700px) { .C .season { grid-template-columns:1fr; } .C .season > h2 { position:static; } .C .progs { grid-template-columns:1fr; } }
+
+  /* prototype chrome */
+  #switcher { position:fixed; bottom:14px; left:50%; transform:translateX(-50%); background:#111; color:#fff; border-radius:30px; padding:6px 10px; display:flex; gap:8px; align-items:center; box-shadow:0 4px 16px #0006; z-index:20; font-size:13px; }
+  #switcher button { background:#333; color:#fff; border:none; border-radius:20px; }
+  #try { position:fixed; bottom:14px; left:14px; background:#111; color:#eee; border-radius:8px; padding:6px 10px; max-width:400px; z-index:20; font-size:12px; }
+  #try summary { cursor:pointer; } #try ol { padding-left:18px; margin:6px 0; } #try a { color:#93c5fd; } #try select { font-size:12px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<details id="try"><summary>PROTOTYPE · things to try</summary><ol>
+  <li>Search <code>pi</code> (2 letters: names/titles starting with it) then <code>pira</code> (3+: anywhere in the text).</li>
+  <li><a href="#/find/Kaori Sakamoto/2025–26">Kaori Sakamoto 2025–26</a>: Worlds FS has a clip plus an untimed full-segment stream (DEMO stand-in).</li>
+  <li>Visitor country <select id="country"><option value="BE">BE</option><option value="FR">FR</option><option value="US">US</option></select>, then <a href="#/find/Adam Siao Him Fa/2025–26">Adam Siao Him Fa</a> Worlds FS (DEMO: clip blocked in FR, falls back to the alternative).</li>
+  <li><a href="#/find/Brian Joubert/2006–07">Brian Joubert 2006–07</a>: pre-video era, overall placements only, "no video yet".</li>
+  <li>Music search: <code>oblivion</code>, <code>aranjuez</code>, <code>pirates</code>: grades differ per Program.</li>
+  <li>Programs with music text but no Piece: search a word only in raw text, e.g. <code>medley</code>.</li>
+  <li>Dark/light toggle top right.</li>
+</ol></details>
+<div id="switcher"><button id="prev">←</button><span id="vlabel"></span><button id="next">→</button></div>
+<script src="data.js"></script>
+<script>
+const D = window.DATA;
+const VARIANTS = { A: "Pages", B: "Dashboard", C: "Programs" };
+const SEGNAME = { SP: "Short program", FS: "Free skating", RD: "Rhythm/short dance", FD: "Free dance", OD: "Original dance", CD: "Compulsory dance" };
+const SEGORD = { CD: 0, OD: 1, RD: 1, SP: 1, FS: 2, FD: 2 };
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const norm = s => String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const ord = n => n + (n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th");
+const group = (xs, f) => { const m = new Map(); for (const x of xs) { const k = f(x); m.has(k) ? m.get(k).push(x) : m.set(k, [x]); } return m; };
+let country = "BE";
+
+// ---------- indexes ----------
+D.perfs.forEach((p, i) => { p.i = i; p.videos = p.videos || []; });
+const sk = id => D.skaters[id];
+const pkey = (s, season, seg) => `${s}|${season}|${seg}`;
+const progOf = new Map(D.programs.map(p => [pkey(p.s, p.season, p.seg), p]));
+D.programs.forEach((p, i) => { p.i = i; p.perfs = []; });
+for (const p of D.perfs) { const pr = progOf.get(pkey(p.s, p.season, p.seg)); if (pr) { pr.perfs.push(p); p.prog = pr; } }
+const sortPerfs = ps => ps.sort((a, b) => a.season.localeCompare(b.season) || a.ym.localeCompare(b.ym) || a.event.localeCompare(b.event) || SEGORD[a.seg] - SEGORD[b.seg]);
+const perfsBySkater = group(sortPerfs([...D.perfs]), p => p.s);
+const progsBySkater = group(D.programs, p => p.s);
+const progsByPiece = new Map();
+for (const pr of D.programs) for (const m of pr.music) { const a = progsByPiece.get(m.piece) || []; if (!a.includes(pr)) a.push(pr); progsByPiece.set(m.piece, a); }
+const pieceInfo = id => {
+  const pc = D.pieces[id], occ = (progsByPiece.get(+id) || []).flatMap(pr => pr.music.filter(m => m.piece == id));
+  const top = f => { const c = {}; occ.forEach(m => { const v = f(m); if (v) c[v] = (c[v] || 0) + 1; }); return Object.entries(c).sort((a, b) => b[1] - a[1])[0]?.[0]; };
+  return { ...pc, id, composers: top(m => m.composers.join(", ")), source: top(m => m.source), programs: progsByPiece.get(+id) || [] };
+};
+
+// DEMO stand-ins: the 2026 sample has no full-segment streams and no geo-blocks, so fake two of each on real Performances.
+(function demo() {
+  const find = (name, ev, seg) => D.perfs.find(p => sk(p.s).name === name && p.event.includes(ev) && p.seg === seg);
+  const standin = D.perfs.find(p => p.videos.length)?.videos[0]?.yt;
+  const a = find("Kaori Sakamoto", "2026 World", "FS"); if (a) a.videos.push({ yt: standin, kind: "stream", origin: "official", title: "LIVE | Women Free Skating | Worlds 2026 (DEMO stand-in)" });
+  const b = find("Brian Joubert", "Worlds 2006", "FS"); if (b) b.videos.push({ yt: standin, kind: "stream", origin: "submitted", title: "Men FS full broadcast (DEMO stand-in)" });
+  const c = find("Adam Siao Him Fa", "2026 World", "FS");
+  if (c && c.videos[0]) { c.videos[0].blocked = ["FR"]; c.videos.push({ yt: standin, kind: "clip", origin: "submitted", title: "Fan upload (DEMO stand-in)" }); }
+})();
+
+// ---------- search ----------
+const sIdx = D.skaters.map(s => ({ s, k: norm(s.name) }));
+const pIdx = Object.keys(D.pieces).map(id => { const pi = pieceInfo(id); return { pi, k: norm([pi.title, pi.composers, pi.source].filter(Boolean).join(" · ")), n: pi.programs.length }; }).filter(x => x.n).sort((a, b) => b.n - a.n);
+const rIdx = D.programs.map(pr => ({ pr, k: norm(pr.raw) }));
+function search(q) {
+  q = norm(q.trim()); if (!q) return null;
+  // shortcut: JS scan over the sample; the real site uses pg_trgm (substring ≥3 chars, prefix below)
+  const hit = q.length >= 3 ? k => k.includes(q) : k => k.startsWith(q) || k.includes(" " + q);
+  const skaters = sIdx.filter(x => hit(x.k)).slice(0, 8).map(x => x.s);
+  const pieces = pIdx.filter(x => hit(x.k)).slice(0, 10).map(x => x.pi);
+  const pieceIds = new Set(pieces.map(p => +p.id));
+  const texts = q.length >= 3 ? rIdx.filter(x => x.k.includes(q) && !x.pr.music.some(m => pieceIds.has(m.piece))).slice(0, 6).map(x => x.pr) : [];
+  return { q, skaters, pieces, texts };
+}
+const pieceSub = pi => [pi.composers, pi.source && "from " + pi.source].filter(Boolean).join(" · ");
+function hitsHTML(r) {
+  if (!r) return "";
+  const g = [];
+  if (r.skaters.length) g.push(`<div class="grp">Skaters</div>` + r.skaters.map(s => `<a class="hit" href="#/skater/${s.id}">${esc(s.name)}</a>`).join(""));
+  if (r.pieces.length) g.push(`<div class="grp">Music</div>` + r.pieces.map(p => `<a class="hit" href="#/piece/${p.id}"><span class="piece">${esc(p.title)}</span> <span class="mut small">${esc(pieceSub(p))}</span> <span class="mut tiny">· ${p.programs.length} Program${p.programs.length > 1 ? "s" : ""}</span></a>`).join(""));
+  if (r.texts.length) g.push(`<div class="grp">In music text, not matched to a Piece</div>` + r.texts.map(pr => `<a class="hit" href="#/program/${pr.i}"><span class="small">${esc(sk(pr.s).name)} · ${pr.season} ${SEGNAME[pr.seg]}</span><br><span class="mut tiny">${esc(pr.raw.slice(0, 110))}</span></a>`).join(""));
+  if (!g.length) g.push(`<div class="hit mut">Nothing found.</div>`);
+  g.push(`<div class="rule">${r.q.length < 3 ? "Under 3 letters: names and titles starting with what you typed." : "Matches anywhere in names, titles, composers, Sources and music text."}</div>`);
+  return g.join("");
+}
+function bindSearch(root, { live } = {}) {
+  const inp = root.querySelector("input[type=search]"), drop = root.querySelector(".drop, .hits");
+  if (!inp) return;
+  inp.value = state.q || "";
+  const run = () => { state.q = inp.value; drop.innerHTML = hitsHTML(search(inp.value)); drop.hidden = !inp.value.trim(); };
+  inp.addEventListener("input", run);
+  if (live || state.q) run();
+  if (drop.classList.contains("drop")) { inp.addEventListener("focus", run); document.addEventListener("click", e => { if (!root.contains(e.target)) drop.hidden = true; }, { once: true }); }
+}
+
+// ---------- shared fragments ----------
+const GRADE_HELP = { identified: "Piece identified by an external ID (Wikidata)", credited: "Composer or Source named in the text", "title only": "Only a bare title: could be another Piece with the same name" };
+const gradeBadge = g => `<span class="g g-${g === "title only" ? "title" : g}" title="${GRADE_HELP[g]}">${g}</span>`;
+function musicHTML(pr, { raw = true, compact = false } = {}) {
+  if (!pr) return `<div class="mut small">Music not known yet.</div>`;
+  const lines = pr.music.map(m => `<div class="line"><a class="piece" href="#/piece/${m.piece}">${esc(m.title)}</a>${m.composers.length ? ` <span class="mut small">${esc(m.composers.join(", "))}</span>` : ""}${m.source ? ` <span class="mut small">· from ${esc(m.source)}</span>` : ""}${m.style && m.style !== "original" && !compact ? ` <span class="mut tiny">(${esc(m.style)})</span>` : ""} ${gradeBadge(m.grade)}</div>`).join("");
+  const attr = `<a href="https://en.wikipedia.org/wiki/${encodeURIComponent(sk(pr.s).article.replace(/ /g, "_"))}" target="_blank" rel="noopener">Wikipedia</a> <span class="tiny">(CC BY-SA 4.0, modified)</span>`;
+  return `<div class="music">${lines || `<div class="mut small">Not matched to a Piece.</div>`}${raw ? `<div class="raw">“${esc(pr.raw)}” · ${attr}</div>` : ""}</div>`;
+}
+const vidOrder = v => v.kind === "clip" ? 0 : v.start != null ? 1 : 2;
+const playable = v => !(v.blocked || []).includes(country);
+const YT_SVG = `<svg class="play" viewBox="0 0 68 48" aria-hidden="true"><rect x="0" y="0" width="68" height="48" rx="12" fill="#cc0000"/><path d="M27 14 L47 24 L27 34 Z" fill="#fff"/></svg>`;
+function videoHTML(p, pick) {
+  const vids = [...p.videos].sort((a, b) => vidOrder(a) - vidOrder(b));
+  if (!vids.length) return `<div class="yt none"><div>No video yet</div><div class="note">Know a YouTube video of this Performance? Any upload counts.</div><button disabled>Submit a video</button></div>`;
+  const ok = vids.filter(playable);
+  const cur = pick != null ? vids[pick] : ok[0];
+  const slot = !cur || !playable(cur)
+    ? `<div class="yt none"><div>Not available in your country</div><div class="note">The only video of this Performance is blocked here.</div><button disabled>Submit another video</button></div>`
+    : `<div class="yt" role="button" tabindex="0" data-yt="${cur.yt}" data-start="${cur.start || 0}" aria-label="Play on YouTube">${YT_SVG}<div class="ttl">${esc(cur.title)}</div>${cur.kind === "stream" ? `<div class="note">Untimed full-segment stream: several hours, find the skater yourself.</div>` : ""}<div class="note">Plays from YouTube (youtube-nocookie.com). Nothing loads until you click; YouTube may then set cookies. <a href="#/privacy" style="color:#ccc">Privacy</a></div></div>`;
+  const alts = vids.length > 1 ? `<ul class="alts">${vids.map((v, i) => `<li class="${v === cur ? "cur" : ""}">${v === cur ? "▶" : "·"} <a href="#" data-pick="${p.i}:${i}">${v.kind === "stream" ? "Full-segment stream" : v.origin === "official" ? "Official ISU clip" : "Other upload"}</a> <span class="tag">${v.kind === "stream" ? "untimed, plays last" : v.origin}</span>${playable(v) ? "" : ` <span class="tag">blocked in ${country}</span>`}</li>`).join("")}</ul>` : "";
+  return slot + alts + `<div class="r2"><button disabled title="Report the wrong video, Skater or music">⚑ Wrong video?</button>${vids.length ? `<button disabled>Submit another video</button>` : ""}</div>`;
+}
+const rankHTML = p => p.approx ? `<span class="approx" title="Overall placement: per-Segment results come from the ISU Import">${ord(p.rank)}*</span>` : `${ord(p.rank)} <span class="mut small">${p.score}</span>`;
+const vidIcon = p => p.videos.some(playable) ? `<span class="ico vid-yes" title="Video">▶ video</span>` : `<span class="ico vid-no">no video</span>`;
+const isuLink = `<a href="#" onclick="return false" title="PROTOTYPE: the Import stores this Segment's ISU results page">ISU result ↗</a>`;
+const wikiLine = s => `<div class="legend">Music from <a href="https://en.wikipedia.org/wiki/${encodeURIComponent(s.article.replace(/ /g, "_"))}" target="_blank" rel="noopener">Wikipedia: ${esc(s.article)}</a> (CC BY-SA 4.0, modified). Open a Performance for the original text.</div>`;
+const footer = `<footer><a href="#/privacy">Privacy</a><a href="#/terms">Terms</a><a href="#/sources">Sources</a> Results © ISU, music from Wikipedia (CC BY-SA 4.0). Not affiliated with the ISU.</footer>`;
+const themeBtn = `<button id="theme" title="Dark / light">◐</button>`;
+const topbar = (withSearch = true) => `<div class="top"><a class="logo" href="#/">iceskatesong</a>${withSearch ? `<div class="grow"><input type="search" placeholder="Search a skater or music…" aria-label="Search"><div class="drop" hidden></div></div>` : `<div style="flex:1"></div>`}<span style="flex:1"></span>${themeBtn}</div>`;
+const seasonsOf = sid => [...new Set((perfsBySkater.get(sid) || []).map(p => p.season).concat((progsBySkater.get(sid) || []).map(p => p.season)))].sort().reverse();
+const perfTitle = p => `${esc(p.event)} · ${SEGNAME[p.seg]}`;
+
+// ---------- Variant A: pages ----------
+function A(r) {
+  if (r.page === "home") return `<div class="top" style="justify-content:flex-end">${themeBtn}</div><main><div class="hero"><h1>Who skated to what</h1><div class="mut">Music and videos of ISU figure skating Performances since 2004–05.</div>
+    <div class="grow"><input type="search" placeholder="A skater, a piece of music, a composer, a film…" autofocus aria-label="Search"><div class="drop" hidden></div></div>
+    <div class="chips mut small">Try <a href="#/q/pirates">Pirates of the Caribbean</a><a href="#/q/oblivion">Oblivion</a><a href="#/q/sakamoto">Kaori Sakamoto</a><a href="#/q/swan">Swan Lake</a></div></div></main>${footer}`;
+  let body = "";
+  if (r.page === "skater") {
+    const s = sk(r.id), seasons = seasonsOf(s.id), season = r.season && seasons.includes(r.season) ? r.season : seasons[0];
+    const ps = (perfsBySkater.get(s.id) || []).filter(p => p.season === season);
+    const comps = group(ps, p => p.event);
+    const orphan = (progsBySkater.get(s.id) || []).filter(pr => pr.season === season && !pr.perfs.length);
+    body = `<div class="crumb"><a href="#/">Search</a> › Skater</div><h1 class="name">${esc(s.name)}</h1><div class="mut small">${seasons.length} Seasons · ${(perfsBySkater.get(s.id) || []).length} Performances</div>
+      <div class="tabs">${seasons.map(x => `<a class="${x === season ? "on" : ""}" href="#/skater/${s.id}/${x}">${x}</a>`).join("")}</div>
+      ${[...comps].map(([ev, ps]) => `<div class="comp"><h3><span>${esc(ev)}</span><span class="mut small">${ps[0].date || ""}</span></h3>${ps.map(p => `<a class="segrow" href="#/perf/${p.i}"><span>${SEGNAME[p.seg]}</span><span>${rankHTML(p)}</span><span class="m">${musicHTML(p.prog, { raw: false, compact: true }).replace(/<a [^>]*>(.*?)<\/a>/g, "$1")}</span><span class="v">${vidIcon(p)}</span></a>`).join("")}</div>`).join("") || `<div class="mut">No ISU results this Season.</div>`}
+      ${orphan.length ? `<div class="card"><b class="small">Programs this Season with no result on record</b>${orphan.map(pr => `<div style="margin-top:6px"><span class="small mut">${SEGNAME[pr.seg]}</span>${musicHTML(pr, { raw: false })}</div>`).join("")}</div>` : ""}
+      ${wikiLine(s)}${ps.some(p => p.approx) ? `<div class="legend">* overall placement; per-Segment ranks and scores come with the ISU Import.</div>` : ""}`;
+  }
+  if (r.page === "piece") {
+    const pi = pieceInfo(r.id), bySk = group(pi.programs, pr => pr.s);
+    body = `<div class="crumb"><a href="#/">Search</a> › Music</div><h1 class="name">${esc(pi.title)}</h1><div class="mut">${esc(pieceSub(pi))}${pi.qid ? ` · <a href="https://www.wikidata.org/wiki/${pi.qid}" target="_blank" rel="noopener">Wikidata</a>` : ""}</div>
+      <div class="mut small" style="margin:6px 0 14px">${bySk.size} Skaters · ${pi.programs.length} Programs <button disabled style="margin-left:8px">⚑ Wrong music?</button></div>
+      ${[...bySk].sort((a, b) => b[1].length - a[1].length).map(([sid, prs]) => `<details class="skl" ${bySk.size <= 4 ? "open" : ""}><summary><span><b>${esc(sk(sid).name)}</b> <span class="mut small">${prs.map(pr => pr.season).join(", ")}</span></span><a href="#/skater/${sid}" class="small">Skater page</a></summary><div class="inner">
+        ${prs.map(pr => `<div style="margin:8px 0"><div class="small"><b>${pr.season} ${SEGNAME[pr.seg]}</b> ${pr.music.filter(m => m.piece == r.id).map(m => gradeBadge(m.grade)).join(" ")}</div><div class="raw">“${esc(pr.raw)}”</div>
+        ${pr.perfs.length ? pr.perfs.map(p => `<div class="small" style="display:flex;gap:10px;margin-top:3px"><a href="#/perf/${p.i}">${esc(p.event)}</a><span>${rankHTML(p)}</span>${vidIcon(p)}</div>`).join("") : `<div class="small mut">No Performance on record.</div>`}</div>`).join("")}
+      </div></details>`).join("")}`;
+  }
+  if (r.page === "perf") {
+    const p = D.perfs[r.id], s = sk(p.s), sibs = p.prog ? p.prog.perfs.filter(x => x !== p) : [];
+    body = `<div class="crumb"><a href="#/">Search</a> › <a href="#/skater/${s.id}/${p.season}">${esc(s.name)} ${p.season}</a> › Performance</div><h1 class="name">${esc(s.name)}</h1><div class="mut">${perfTitle(p)}</div>
+      <div class="perf" style="margin-top:14px"><div>${videoHTML(p, r.pick)}</div><aside>
+        <div class="card"><div class="mut tiny">RESULT</div><div style="font-size:20px">${rankHTML(p)}</div><div class="small mut">${esc(p.date)}</div><div class="small" style="margin-top:4px">${isuLink}</div></div>
+        <div class="card"><div class="mut tiny">MUSIC · ${p.season} ${SEGNAME[p.seg].toUpperCase()}</div>${musicHTML(p.prog)}<div class="r2"><button disabled>⚑ Wrong music?</button><button disabled>Suggest music</button></div></div>
+        ${sibs.length ? `<div class="card"><div class="mut tiny">SAME PROGRAM, OTHER COMPETITIONS</div>${sibs.map(x => `<div class="small" style="display:flex;justify-content:space-between;gap:8px;margin-top:3px"><a href="#/perf/${x.i}">${esc(x.event)}</a><span>${vidIcon(x)}</span></div>`).join("")}</div>` : ""}
+      </aside></div>`;
+  }
+  if (r.page === "program") { const pr = D.programs[r.id]; return A(pr.perfs[0] ? { page: "perf", id: pr.perfs[0].i } : { page: "skater", id: pr.s, season: pr.season }); }
+  if (r.page === "legal") body = legal(r.id);
+  return topbar() + `<main>${body}</main>` + footer;
+}
+
+// ---------- Variant B: dashboard ----------
+function B(r) {
+  let center = `<div class="empty">Search a skater or music on the left.<br><span class="small">The table and the video stay side by side.</span></div>`, sel = r.perf != null ? D.perfs[r.perf] : null, base = "";
+  const rows = (ps, cols) => ps.map(p => `<tr class="row ${sel === p ? "sel" : ""}" data-go="${base}/${p.i}">${cols(p)}</tr>`).join("");
+  if (r.page === "skater") {
+    const s = sk(r.id), ps = [...(perfsBySkater.get(s.id) || [])].reverse(); base = `#/skater/${s.id}`;
+    const vids = ps.filter(p => p.videos.some(playable)).length, best = ps.filter(p => !p.approx && p.rank === 1).length;
+    if (!sel && r.season) sel = ps.find(p => p.season === r.season && p.videos.length) || ps.find(p => p.season === r.season);
+    const bySeason = group(ps, p => p.season);
+    center = `<h2 style="margin:0">${esc(s.name)}</h2><div class="kpis"><div class="kpi"><b>${bySeason.size}</b><span>Seasons</span></div><div class="kpi"><b>${ps.length}</b><span>Performances</span></div><div class="kpi"><b>${vids}</b><span>with video</span></div><div class="kpi"><b>${best}</b><span>Segment wins</span></div></div>
+      <table><thead><tr><th>Date</th><th>Competition</th><th>Segment</th><th>Rank</th><th>Music</th><th></th></tr></thead><tbody>
+      ${[...bySeason].map(([season, ps]) => `<tr class="season" id="s${season}"><td colspan="6">${season}</td></tr>` + rows(ps, p => `<td class="mut">${esc(p.ym)}</td><td>${esc(p.event)}</td><td>${p.seg}</td><td>${rankHTML(p)}</td><td>${p.prog ? p.prog.music.map(m => `${esc(m.title)} ${gradeBadge(m.grade)}`).join("<br>") || `<span class="mut small">${esc(p.prog.raw.slice(0, 40))}</span>` : `<span class="mut">—</span>`}</td><td>${vidIcon(p)}</td>`)).join("")}
+      </tbody></table>${wikiLine(s)}${ps.some(p => p.approx) ? `<div class="legend">* overall placement; per-Segment ranks come with the ISU Import.</div>` : ""}`;
+  }
+  if (r.page === "piece") {
+    const pi = pieceInfo(r.id); base = `#/piece/${pi.id}`;
+    const ps = pi.programs.flatMap(pr => pr.perfs).sort((a, b) => b.season.localeCompare(a.season));
+    const noPerf = pi.programs.filter(pr => !pr.perfs.length);
+    center = `<h2 style="margin:0">${esc(pi.title)}</h2><div class="mut">${esc(pieceSub(pi))}${pi.qid ? ` · <a href="https://www.wikidata.org/wiki/${pi.qid}" target="_blank" rel="noopener">Wikidata</a>` : ""}</div>
+      <div class="kpis"><div class="kpi"><b>${new Set(pi.programs.map(p => p.s)).size}</b><span>Skaters</span></div><div class="kpi"><b>${pi.programs.length}</b><span>Programs</span></div><div class="kpi"><b>${ps.length}</b><span>Performances</span></div><div class="kpi"><b>${ps.filter(p => p.videos.some(playable)).length}</b><span>with video</span></div></div>
+      <table><thead><tr><th>Skater</th><th>Season</th><th>Competition</th><th>Seg</th><th>Rank</th><th>Grade</th><th></th></tr></thead><tbody>
+      ${rows(ps, p => `<td><b>${esc(sk(p.s).name)}</b></td><td>${p.season}</td><td>${esc(p.event)}</td><td>${p.seg}</td><td>${rankHTML(p)}</td><td>${p.prog.music.filter(m => m.piece == pi.id).map(m => gradeBadge(m.grade)).join(" ")}</td><td>${vidIcon(p)}</td>`)}
+      ${noPerf.map(pr => `<tr><td><b>${esc(sk(pr.s).name)}</b></td><td>${pr.season}</td><td class="mut" colspan="3">${SEGNAME[pr.seg]}: no Performance on record</td><td>${pr.music.filter(m => m.piece == pi.id).map(m => gradeBadge(m.grade)).join(" ")}</td><td></td></tr>`).join("")}
+      </tbody></table>`;
+  }
+  if (r.page === "perf") { const p = D.perfs[r.id]; return B({ page: "skater", id: p.s, perf: p.i, pick: r.pick }); }
+  if (r.page === "program") { const pr = D.programs[r.id]; return B({ page: "skater", id: pr.s, perf: pr.perfs[0]?.i, season: pr.season }); }
+  if (r.page === "legal") center = legal(r.id);
+  const right = sel ? `<h2>${esc(sk(sel.s).name)}</h2><div class="mut small">${perfTitle(sel)} · ${sel.season}</div><section>${videoHTML(sel, r.pick)}</section>
+      <section><h4>Result</h4>${rankHTML(sel)} <span class="mut small">${esc(sel.date)}</span> · ${isuLink}</section>
+      <section><h4>Music</h4>${musicHTML(sel.prog)}<div class="r2"><button disabled>⚑ Wrong music?</button><button disabled>Suggest music</button></div></section>
+      ${sel.prog && sel.prog.perfs.length > 1 ? `<section><h4>Same Program</h4>${sel.prog.perfs.filter(x => x !== sel).map(x => `<div class="small"><a href="${base || `#/skater/${sel.s}`}/${x.i}">${esc(x.event)}</a> ${vidIcon(x)}</div>`).join("")}</section>` : ""}`
+    : `<div class="empty">Pick a row to watch it here.</div>`;
+  return `<div class="top"><a class="logo" href="#/">iceskatesong</a><span style="flex:1"></span>${themeBtn}</div><div class="dash"><div class="rail"><input type="search" placeholder="Skater or music…" aria-label="Search"><div class="hits"></div></div><div class="center">${center}</div><div class="right">${right}</div></div>`;
+}
+
+// ---------- Variant C: programs ----------
+function C(r) {
+  const card = (pr, { who = false, focus } = {}) => {
+    const open = focus ?? (pr.perfs.find(p => p.videos.some(playable)) || null);
+    return `<div class="prog" id="prog${pr.i}"><h3><span>${who ? `${esc(sk(pr.s).name)} · ${pr.season} · ` : ""}${SEGNAME[pr.seg]}</span><button disabled class="tiny">⚑ Wrong music?</button></h3>${musicHTML(pr)}
+      <div class="tiles">${pr.perfs.length ? pr.perfs.map(p => `<button class="tile ${p === open ? "on" : ""} ${p.videos.some(playable) ? "" : "novid"}" data-tile="${pr.i}:${p.i}"><div>${p.videos.some(playable) ? "▶ " : ""}${esc(p.event.replace(/^\d{4}(–\d{2})? /, ""))}</div><div class="mut tiny">${rankHTML(p)}</div></button>`).join("") : `<span class="mut small">No Performance on record.</span>`}</div>
+      ${open ? `<div class="stage">${videoHTML(open, r.pick)}<div class="small mut" style="margin-top:6px">${perfTitle(open)} · ${rankHTML(open)} · ${isuLink}</div></div>` : ""}</div>`;
+  };
+  let body = "";
+  if (r.page === "home") body = `<div class="hero"><h1>Find the music of a Program, or the Programs of a music.</h1><div class="grow"><input type="search" placeholder="Skater, music, composer, film…" aria-label="Search"><div class="drop" hidden></div></div></div>
+    <h3 class="mut small" style="text-transform:uppercase;letter-spacing:.05em">Most skated music in this sample</h3><div class="pop">${pIdx.slice(0, 24).map(x => `<a href="#/piece/${x.pi.id}"><b>${esc(x.pi.title)}</b><div class="mut tiny">${esc(pieceSub(x.pi)) || "&nbsp;"} · ${x.n} Programs</div></a>`).join("")}</div>`;
+  if (r.page === "skater" || r.page === "perf" || r.page === "program") {
+    const fp = r.page === "perf" ? D.perfs[r.id] : null, fpr = r.page === "program" ? D.programs[r.id] : fp?.prog;
+    const s = sk(r.page === "skater" ? r.id : (fp || fpr).s);
+    const progs = (progsBySkater.get(s.id) || []), seasons = seasonsOf(s.id);
+    const loose = (perfsBySkater.get(s.id) || []).filter(p => !p.prog);
+    body = `<h1 style="margin:0">${esc(s.name)}</h1><div class="mut small">${seasons.length} Seasons · ${progs.length} Programs · ${(perfsBySkater.get(s.id) || []).length} Performances</div>
+      ${seasons.map(season => { const ps = progs.filter(p => p.season === season).sort((a, b) => SEGORD[a.seg] - SEGORD[b.seg]); const lp = loose.filter(p => p.season === season);
+        return `<div class="season" id="s${season}"><h2>${season}</h2><div class="progs">${ps.map(pr => card(pr, { focus: pr === fpr ? (fp || undefined) : undefined })).join("")}
+        ${lp.length ? `<div class="prog"><h3><span>Music not known yet</span></h3><div class="tiles">${lp.map(p => `<span class="tile ${p.videos.length ? "" : "novid"}">${esc(p.event)} ${p.seg}<div class="mut tiny">${rankHTML(p)}</div></span>`).join("")}</div></div>` : ""}</div></div>`; }).join("")}
+      ${(perfsBySkater.get(s.id) || []).some(p => p.approx) ? `<div class="legend">* overall placement; per-Segment ranks come with the ISU Import.</div>` : ""}`;
+  }
+  if (r.page === "piece") {
+    const pi = pieceInfo(r.id), bySk = group(pi.programs, pr => pr.s);
+    body = `<h1 style="margin:0">${esc(pi.title)}</h1><div class="mut">${esc(pieceSub(pi))}${pi.qid ? ` · <a href="https://www.wikidata.org/wiki/${pi.qid}" target="_blank" rel="noopener">Wikidata</a>` : ""} · ${bySk.size} Skaters · ${pi.programs.length} Programs</div>
+      ${[...bySk].map(([sid, prs]) => `<div class="who"><a href="#/skater/${sid}">${esc(sk(sid).name)}</a></div><div class="progs">${prs.map(pr => card(pr, { who: false })).join("")}</div>`).join("")}`;
+  }
+  if (r.page === "legal") body = legal(r.id);
+  return topbar(r.page !== "home") + `<main>${body}</main>` + footer;
+}
+
+function legal(id) { return `<h1>${id[0].toUpperCase() + id.slice(1)}</h1><p class="mut">Placeholder: the legal pages are decided in issue #21.</p>`; }
+
+// ---------- router + chrome ----------
+const state = { q: "" };
+let variant = new URLSearchParams(location.search).get("variant") || "A";
+if (!VARIANTS[variant]) variant = "A";
+function route() {
+  const h = decodeURIComponent(location.hash.slice(2)).split("/");
+  if (h[0] === "find") { const s = D.skaters.find(s => s.name === h[1]); if (s) { location.replace(`#/skater/${s.id}/${h[2] || ""}`); return null; } }
+  if (h[0] === "q") { state.q = h[1]; return { page: "home" }; }
+  if (h[0] === "skater") return variant === "B" && h[2] && /^\d+$/.test(h[2]) ? { page: "skater", id: +h[1], perf: +h[2] } : { page: "skater", id: +h[1], season: h[2] };
+  if (h[0] === "piece") return { page: "piece", id: h[1], perf: h[2] != null ? +h[2] : undefined };
+  if (h[0] === "perf") return { page: "perf", id: +h[1] };
+  if (h[0] === "program") return { page: "program", id: +h[1] };
+  if (["privacy", "terms", "sources"].includes(h[0])) return { page: "legal", id: h[0] };
+  return { page: "home" };
+}
+let cur = null;
+function render(pick) {
+  const r = route(); if (!r) return;
+  cur = r; r.pick = pick;
+  document.body.className = variant;
+  document.getElementById("app").innerHTML = ({ A, B, C })[variant](r);
+  bindSearch(document.getElementById("app"), { live: variant === "B" || !!state.q });
+  document.getElementById("vlabel").textContent = `${variant} (${VARIANTS[variant]})`;
+  if (pick == null) { const sel = document.querySelector("tr.sel"); sel ? sel.scrollIntoView({ block: "center" }) : r.season && scrollToSeason(r.season); }
+  if (variant === "C" && cur.page !== "skater" && cur.page !== "piece" && cur.page !== "home" && pick == null) document.querySelector(".tile.on")?.scrollIntoView({ block: "center" });
+}
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-yt]");
+  if (t && !t.querySelector("iframe")) {  // load the player only now: no YouTube request before the click
+    if (e.target.closest("a")) return;
+    t.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${t.dataset.yt}?autoplay=1&start=${t.dataset.start}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen title="YouTube video"></iframe>`;
+    return;
+  }
+  const pk = e.target.closest("[data-pick]");
+  if (pk) { e.preventDefault(); const [pi, i] = pk.dataset.pick.split(":").map(Number); const stage = pk.closest(".stage, .right, .perf > div, section"); swapVideo(stage, D.perfs[pi], i); return; }
+  const go = e.target.closest("[data-go]"); if (go && !e.target.closest("a")) { location.hash = go.dataset.go; return; }
+  const tile = e.target.closest("[data-tile]");
+  if (tile) { const [pri, pi] = tile.dataset.tile.split(":").map(Number); const card = tile.closest(".prog"); card.querySelectorAll(".tile").forEach(x => x.classList.toggle("on", x === tile)); let st = card.querySelector(".stage"); if (!st) { st = document.createElement("div"); st.className = "stage"; card.append(st); } const p = D.perfs[pi]; st.innerHTML = videoHTML(p) + `<div class="small mut" style="margin-top:6px">${perfTitle(p)} · ${rankHTML(p)} · ${isuLink}</div>`; return; }
+  if (e.target.id === "theme") { const d = document.documentElement, t2 = d.dataset.theme === "dark" ? "light" : "dark"; d.dataset.theme = t2; try { localStorage.setItem("theme", t2); } catch {} }
+});
+function scrollToSeason(season) {  // under the sticky top bar
+  const el = document.getElementById("s" + season); if (!el) return;
+  const box = el.closest(".center") || null, y = el.getBoundingClientRect().top - 70;
+  box ? box.scrollTop += y + 20 : window.scrollTo(0, window.scrollY + y);
+}
+function swapVideo(container, p, i) {  // replace the slot + alternatives with video i
+  const html = videoHTML(p, i), tmp = document.createElement("div"); tmp.innerHTML = html;
+  const old = container.querySelectorAll(":scope > .yt, :scope > .alts, :scope > .r2"); old.forEach((n, k) => k === 0 ? n.replaceWith(...tmp.childNodes) : n.remove());
+}
+try { document.documentElement.dataset.theme = localStorage.getItem("theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"); } catch { }
+const setVariant = v => { variant = v; const u = new URL(location); u.searchParams.set("variant", v); history.replaceState(null, "", u); render(); };
+const keys = Object.keys(VARIANTS), step = d => setVariant(keys[(keys.indexOf(variant) + d + keys.length) % keys.length]);
+document.getElementById("prev").onclick = () => step(-1); document.getElementById("next").onclick = () => step(1);
+document.addEventListener("keydown", e => { if (e.target.closest("input, textarea, select, [contenteditable]")) return; if (e.key === "ArrowLeft") step(-1); if (e.key === "ArrowRight") step(1); });
+document.getElementById("country").onchange = e => { country = e.target.value; render(); };
+window.addEventListener("hashchange", () => render());
+render();
+</script>
+</body>
+</html>
