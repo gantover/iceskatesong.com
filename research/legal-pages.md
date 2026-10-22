@@ -23,7 +23,7 @@ R1 needs **three pages, linked in the footer of every page**, plus **notices on 
 - **A separate imprint page:** none in Belgium for a non-commercial site, provided the privacy page names the owner and gives a contact. Germany and Austria differ; see [Imprint](#imprint--contact).
 
 **R2 adds** (anonymous Submissions/Flags, Turnstile, hashed IPs for Blocks):
-- **Privacy page:** three new sections: Submissions (what is stored, the Turnstile check, the keyed-hash IP used for Blocks, retention, legal basis Art 6(1)(f)).
+- **Privacy page:** three new sections: Submissions/Flags (what is stored, retention), Turnstile (Cloudflare), and the keyed-hash IP used for Blocks (legal basis Art 6(1)(f), retention).
 - **Terms page:** a Contributions clause, for example "you dedicate your Submission to CC0 / grant us a licence; don't submit personal data in hints".
 - **Submission and Flag forms:** a one-line notice beside the button, and **Turnstile loaded only on those forms**.
 - **DSA:** if the site ever earns money, DSA hosting duties may appear; see [R2](#r2-additions).
@@ -37,7 +37,8 @@ R1 needs **three pages, linked in the footer of every page**, plus **notices on 
 - **Attribution stands in for consent.** The owner decided not to ask the ISU ([#12](https://github.com/gantover/iceskatesong.com/issues/12), [ADR 0001](../docs/adr/0001-isu-results-are-the-only-record-creator.md)), so attribution is the mitigation the site has chosen, not a legal requirement. To keep that promise:
   - Credit "International Skating Union" with a link to the exact ISU result page on every Performance/Competition page, and on `/sources`.
   - Say "Not affiliated with or endorsed by the ISU."
-  - Don't copy ISU page layout, logos or PDFs. Republish facts only, which is what §3.1's "don't remove notices" protects.
+  - Don't reproduce ISU pages, logos or PDFs, so there are no ISU notices to strip (§3.1).
+  - Republishing the facts themselves is the accepted risk from #12.
 - **Uncertainty:** the EU sui generis database right (Directive 96/9/EC) may protect ISU results as a database. Attribution does not cure a substantial extraction. This is the accepted risk recorded in #12.
 
 ### English Wikipedia (program music tables)
@@ -100,7 +101,7 @@ Republishing names, nationality, ISU IDs and results is processing of personal d
 | Processing | Who | Consent? | Notice on Privacy page |
 |---|---|---|---|
 | Every request passes through Cloudflare (TLS terminates there) | Cloudflare = **processor**. [Customer DPA v6.4](https://www.cloudflare.com/cloudflare-customer-dpa/) (effective 3 April 2026) is part of the Self-Serve agreement; transfers rely on the EU-US Data Privacy Framework, with SCCs as fallback | No. Art 6(1)(f), delivering and securing the site | Name Cloudflare, the purpose, and the US transfer under DPF |
-| Cloudflare cookies (`__cf_bm` if Bot Fight Mode is on; `cf_clearance` after a challenge) | Cloudflare | Cloudflare classes them as "strictly necessary" ([cookie list](https://developers.cloudflare.com/fundamentals/reference/policies-compliances/cloudflare-cookies/)), and they fall under the Art 5(3) security/necessity exception | List them. **Owner: check whether Bot Fight Mode is on.** Free plans set no Cloudflare cookie by default |
+| Cloudflare cookies (`__cf_bm` if Bot Fight Mode is on; `cf_clearance` after a challenge) | Cloudflare | Cloudflare classes them as "strictly necessary" ([cookie list](https://developers.cloudflare.com/fundamentals/reference/policies-compliances/cloudflare-cookies/)), and they fall under the Art 5(3) security/necessity exception | List them. **Owner: check whether Bot Fight Mode is on.** `__cf_bm` needs (Super) Bot Fight Mode enabled, `cf_clearance` is set only after a challenge, and the Always Online cookies only if that feature is on. The page doesn't say which are on by default |
 | Origin logs (web app, `docker compose logs`) | Owner | No. Art 6(1)(f) | State the retention. **Don't log visitor IPs at R1**, or keep them ≤ 14 days. Docker's default `json-file` driver never rotates, so set `max-size`/`max-file` |
 | Admin session cookie | Owner | No: "strictly necessary in order for the provider of an information society service explicitly requested by the subscriber or user to provide the service" (Art 5(3), as quoted in [EDPB Guidelines 2/2023](https://www.edpb.europa.eu/our-work-tools/our-documents/guidelines/guidelines-22023-technical-scope-art-53-eprivacy-directive_en) fn 4) | One line |
 | Analytics | n/a | **Belgium: consent.** The APD checklist footnote 12 says visitor counting is not "strictly necessary" | **Don't add analytics at R1.** If you want numbers, count from server logs, without cookies or client JS |
