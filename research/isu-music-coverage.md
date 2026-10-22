@@ -7,8 +7,8 @@ Research for [issue #2](https://github.com/gantover/iceskatesong.com/issues/2). 
 - **ISU result documents carry no music at all.** That covers entries, starting orders, results and judges'-details PDFs. In 20 sampled events (4 seasons × 5 event types), 0 have a music-title sheet or any other music document. The only "music" strings in them are scoring labels.
 - **The only ISU music source is the Skater/Team bio page** (`/bios/isufsNNNNNNNN.htm`). It holds exactly **one Short Program/Rhythm Dance music field and one Free Skating/Free Dance music field**, labelled "as of season X", and **each new season overwrites them**. ISU keeps no music history.
 - **Live bios cover few past Performances.** We sampled 1,939 entries. 93% have a bio listing *some* music, but only **15%** list music for the season they skated. By season: 2004/05 17%, 2011/12 19%, 2017/18 21%, 2023/24 5%. Those hits are mostly skaters whose bio stopped being updated that season, typically because they retired.
-- **The Internet Archive (Wayback Machine) recovers the history from about 2009 on.** In a random sample, it returned a bio snapshot with music for the right season for **60/60 entries from 2011/12, 2017/18 and 2023/24, but 0/20 for 2004/05**. No 2004/05 snapshots exist.
-- **Implication for phase order:** ISU data alone cannot be the main music source. Archived bio snapshots can seed a per-Skater, per-Season music list for roughly 2009/10 onwards, at Program granularity, not per Performance. 2004/05 to about 2008/09 and any mid-season music changes will need Submissions or other sources.
+- **The Internet Archive (Wayback Machine) recovers past seasons from 2011/12 onwards, as far as we measured.** In a random sample, it returned a bio snapshot with music for the right season for **20/20 entries in each of 2011/12, 2017/18 and 2023/24** (each 20/20 means a true rate of ≥ about 83% at 95% confidence, not 100%). It returned **0/20 for 2004/05**, where no in-season snapshots exist at all. We did not measure 2005/06 to 2010/11. The earliest snapshot we saw was from 2009-07, on one bio, which is a hint only.
+- **Implication for phase order:** ISU data alone cannot be the main music source. Archived bio snapshots can seed a per-Skater, per-Season music list from 2011/12 on, at Program granularity, not per Performance. 2004/05 and any mid-season music changes need Submissions or other sources. 2005/06 to 2010/11 is untested and should be assumed to need them too.
 - **Terms:** ISU gives no explicit permission to reuse this data. The scraping ban we found sits in ISU's Terms of Service, and those are scoped to its B2B "Business Applications". Pages carry "© ISU. All Rights Reserved", and bios contain personal data. Get written consent from ISU before bulk reuse (see [Terms and scraping](#terms-and-scraping)).
 
 ## Method
@@ -117,7 +117,7 @@ Retired skaters keep their last season ([Buttle](http://www.isuresults.com/bios/
 
 **Reading.**
 - A bio's music matches an event only when the skater's last updated season is that season.
-- Elite active skaters (GP, Worlds) score worst, because their bios have moved on.
+- The GP samples score 0% in 2004/05 (0/24) and 2023/24 (0/41), because those active elite skaters' bios have moved on. The pattern is not uniform: 2017/18 GP scores 28%.
 - The music field is per Skater/Team per Season. It is the Program's music, not the Performance's: a mid-season music change is invisible.
 - The 2026/27 season is under way (GP started in October). 140 of 1,287 bios already show 2026/27 music, while Malinin's still shows 2025/26. Bio updates lag.
 
