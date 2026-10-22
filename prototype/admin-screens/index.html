@@ -1,0 +1,616 @@
+<!doctype html>
+<!--
+  PROTOTYPE — throwaway. Answers "What do the R2 Admin screens look like?" (issue #14).
+  Three structurally different Admin shells, switchable via ?variant=A|B|C (bottom bar, or ← →):
+    A  Inbox:        queue list on the left, item + fix tools on the right
+    B  Record-first: search any record; pending Submissions/Flags show on the record they target
+    C  One at a time: one queue item per screen, keyboard driven
+  The item, edit, merge/split and audit screens are shared; only the shells differ.
+  Sub-shape B (standalone page) because no web app or framework exists yet.
+  Data is FAKE (real skater names for realism, invented IDs), in memory only; "Reset data" restores it.
+  Every action writes an audit change shaped like ADR 0002 (rows with before/after); Revert refuses
+  when a row no longer equals its after-image.
+  Run: open this file in a browser.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>R2 Admin screens (PROTOTYPE)</title>
+<style>
+  :root { --bg:#fafaf9; --fg:#1c1917; --mut:#78716c; --line:#e7e5e4; --acc:#2563eb; --sub:#dbeafe; --flag:#fee2e2; --ok:#dcfce7; --warn:#fef3c7; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:14px/1.45 system-ui, sans-serif; background:var(--bg); color:var(--fg); padding-bottom:80px; }
+  header { display:flex; gap:16px; align-items:center; padding:10px 16px; border-bottom:1px solid var(--line); background:#fff; position:sticky; top:0; z-index:5; }
+  header nav a { margin-right:12px; color:var(--mut); text-decoration:none; padding:4px 0; }
+  header nav a.on { color:var(--fg); border-bottom:2px solid var(--acc); }
+  a { color:var(--acc); }
+  .split { display:grid; grid-template-columns:340px 1fr; min-height:calc(100vh - 50px); }
+  aside { border-right:1px solid var(--line); background:#fff; overflow:auto; padding:8px; }
+  aside input:not([type=checkbox]) { width:100%; padding:6px; margin-bottom:6px; }
+  main { padding:16px 20px; max-width:1000px; }
+  main.wide { margin:0 auto; }
+  main.card { margin:24px auto; background:#fff; border:1px solid var(--line); border-radius:10px; box-shadow:0 4px 20px #0001; padding:24px; max-width:860px; }
+  .li { padding:8px; border-radius:6px; cursor:pointer; border:1px solid transparent; }
+  .li:hover { background:#f5f5f4; } .li.sel { border-color:var(--acc); background:#eff6ff; }
+  .li.approved, .li.rejected, .li.resolved, .li.dismissed { opacity:.5; }
+  .chip { font-size:11px; padding:1px 6px; border-radius:9px; background:var(--line); white-space:nowrap; }
+  .chip.submissions { background:var(--sub); } .chip.flags { background:var(--flag); }
+  .muted { color:var(--mut); } .small { font-size:12px; }
+  .grp { font-size:11px; text-transform:uppercase; color:var(--mut); margin:10px 0 2px; }
+  .item { border:1px solid var(--line); border-radius:8px; padding:12px; margin-bottom:16px; background:#fff; }
+  .item.done { background:#f5f5f4; }
+  .itemhead { margin-bottom:6px; }
+  blockquote { margin:6px 0; padding:6px 10px; border-left:3px solid #f87171; background:#fff7f7; }
+  .yt { background:#111; color:#eee; padding:28px; text-align:center; border-radius:6px; margin:8px 0; font-family:monospace; }
+  .warn { background:var(--warn); padding:6px 8px; border-radius:4px; }
+  .row { margin:8px 0; display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+  section { margin-top:12px; }
+  h3 { margin:8px 0; } h4 { margin:14px 0 4px; font-size:13px; text-transform:uppercase; color:var(--mut); }
+  table { border-collapse:collapse; width:100%; } td, th { border-bottom:1px solid var(--line); padding:4px 6px; text-align:left; vertical-align:top; }
+  tr.focus { outline:2px solid #f87171; } tr.hidden td { color:var(--mut); text-decoration:line-through; } tr.hidden td:last-child, tr.hidden td:nth-child(2) { text-decoration:none; }
+  .win { font-size:11px; background:var(--ok); padding:0 5px; border-radius:6px; }
+  .arr { padding:6px; border:1px dashed var(--line); border-radius:6px; margin:4px 0; }
+  .newpiece { margin-top:6px; padding:6px; background:#f5f5f4; border-radius:4px; }
+  .line { display:block; }
+  button { font:inherit; padding:3px 9px; border:1px solid #d6d3d1; background:#fff; border-radius:5px; cursor:pointer; }
+  button.pri { background:var(--acc); color:#fff; border-color:var(--acc); }
+  .note input { width:100%; padding:6px 8px; border:1px dashed #a8a29e; border-radius:6px; margin-bottom:10px; }
+  details.ch { border-bottom:1px solid var(--line); padding:6px 0; } details.ch summary { cursor:pointer; }
+  .diff { margin:4px 0 4px 18px; font-size:12px; } del { color:#b91c1c; } ins { color:#15803d; text-decoration:none; }
+  .searchwrap { position:relative; flex:1; max-width:560px; } .searchwrap input { width:100%; padding:8px; font-size:15px; }
+  .dropdown { position:absolute; left:0; right:0; background:#fff; box-shadow:0 6px 20px #0002; max-height:60vh; overflow:auto; border-radius:6px; }
+  .dropdown:empty { display:none; }
+  header.c { justify-content:space-between; }
+  .keys { text-align:center; }
+  .big { font-size:18px; text-align:center; }
+  #switcher { position:fixed; bottom:14px; left:50%; transform:translateX(-50%); background:#111; color:#fff; border-radius:30px; padding:6px 10px; display:flex; gap:8px; align-items:center; box-shadow:0 4px 16px #0005; z-index:20; font-size:13px; }
+  #switcher button { background:#333; color:#fff; border:none; border-radius:20px; }
+  #try { position:fixed; bottom:14px; left:14px; background:#111; color:#eee; border-radius:8px; padding:6px 10px; max-width:420px; z-index:20; font-size:12px; }
+  #try summary { cursor:pointer; } #try ol { padding-left:18px; margin:6px 0; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<details id="try"><summary>PROTOTYPE · things to try</summary><ol>
+  <li>Video Submission with a hint "starts at 1:02": approve with start 1:02.</li>
+  <li>Video Submission aimed at the short dance that is really the free dance: change the Performance, approve.</li>
+  <li>Video Submission of a stream already linked: see the warning, reject.</li>
+  <li>Flag "This is Shoma Uno": move the Performance to Uno's 2019–20 SP Program.</li>
+  <li>Flag on Hanyu 2019–20 SP music: split the Four Continents Performance into Program #2, then give #2 the music Ballade No. 1.</li>
+  <li>Merge Oleksii Bychenko into Alexei Bychenko; Raul Di Blasio into Raúl di Blasio; Piece "Ballade No.1" into "Ballade No. 1 in G minor".</li>
+  <li>Revert conflict: hide Jason Brown's video (Flag), then change its start, then revert the hide → refused.</li>
+  <li>Revert a "migrated from corrections file" change in the Audit log.</li>
+</ol></details>
+<div id="switcher">
+  <button onclick="cycle(-1)">‹</button><span id="vlabel"></span><button onclick="cycle(1)">›</button>
+  <button onclick="if(confirm('Reset all fake data?')){seed();render()}">Reset data</button>
+</div>
+<script>
+const VARIANTS = { A: 'Inbox', B: 'Record-first', C: 'One at a time' };
+const STYLES = ['original', 'orchestral', 'piano', 'ballad', 'string-quartet cover', 'remix', 'vocal cover'];
+const ORIGINS = ['admin', 'corrections', 'submission', 'wikipedia', 'isu']; // music precedence, high → low
+const PLAY_ORDER = ['official', 'admin', 'submitted'];
+let variant = new URLSearchParams(location.search).get('variant');
+if (!VARIANTS[variant]) variant = 'A';
+let S, nav;
+
+function seed() {
+  const hanyu = (comp, rank, extra) => ({ skater: 'sk-hanyu', program: 'pg-h19sp', season: '2019–20', comp, event: 'Men', seg: 'Short program', rank, printed: 'HANYU Yuzuru', nation: 'JPN', ...extra });
+  S = {
+    skaters: {
+      'sk-hanyu': { name: 'Yuzuru Hanyu', nation: 'JPN', keys: ['isu:10967', 'slug:yuzuru-hanyu'], aliases: ['HANYU Yuzuru', '羽生結弦'] },
+      'sk-uno': { name: 'Shoma Uno', nation: 'JPN', keys: ['isu:10985', 'slug:shoma-uno'], aliases: ['UNO Shoma'] },
+      'sk-brown': { name: 'Jason Brown', nation: 'USA', keys: ['isu:10944', 'slug:jason-brown'], aliases: ['BROWN Jason'] },
+      'sk-bychenko': { name: 'Alexei Bychenko', nation: 'ISR', keys: ['isu:10372', 'slug:alexei-bychenko'], aliases: ['BYCHENKO Alexei'] },
+      'sk-bychenko-2': { name: 'Oleksii Bychenko', nation: 'UKR', keys: ['isu:9877', 'slug:oleksii-bychenko'], aliases: ['BYCHENKO Oleksii'] },
+      'sk-papadakis': { name: 'Gabriella Papadakis', nation: 'FRA', keys: ['slug:gabriella-papadakis'], aliases: [] },
+      'sk-cizeron': { name: 'Guillaume Cizeron', nation: 'FRA', keys: ['slug:guillaume-cizeron'], aliases: [] },
+    },
+    teams: { 'tm-pc': { skaters: ['sk-papadakis', 'sk-cizeron'], keys: ['isu-team:11410', 'slug:papadakis-cizeron'], aliases: [] } },
+    artists: {
+      'ar-chopin': { name: 'Frédéric Chopin', keys: ['wd:Q1268', 'slug:frederic-chopin'], aliases: ['Chopin'] },
+      'ar-ume': { name: 'Shigeru Umebayashi', keys: ['slug:shigeru-umebayashi'], aliases: [] },
+      'ar-diblasio': { name: 'Raúl di Blasio', keys: ['slug:raul-di-blasio'], aliases: [] },
+      'ar-diblasio-2': { name: 'Raul Di Blasio', keys: ['slug:raul-di-blasio-2'], aliases: [] },
+      'ar-beethoven': { name: 'Ludwig van Beethoven', keys: ['wd:Q255', 'slug:ludwig-van-beethoven'], aliases: ['Beethoven'] },
+      'ar-armin': { name: 'Armin van Buuren', keys: ['slug:armin-van-buuren'], aliases: [] },
+      'ar-twofeet': { name: 'Two Feet', keys: ['slug:two-feet'], aliases: [] },
+    },
+    sources: { 'so-onmyoji': { name: 'Onmyoji (2001 film)', keys: ['slug:onmyoji'], aliases: [] } },
+    pieces: {
+      'pc-ballade': { name: 'Ballade No. 1 in G minor', artists: ['ar-chopin'], source: null, genres: ['classical'], keys: ['slug:ballade-no-1-chopin'], aliases: [] },
+      'pc-ballade-2': { name: 'Ballade No.1', artists: ['ar-chopin'], source: null, genres: [], keys: ['slug:ballade-no1'], aliases: ['Ballade No.1 (Chopin)'] },
+      'pc-seimei': { name: 'Seimei', artists: ['ar-ume'], source: 'so-onmyoji', genres: ['film score'], keys: ['slug:seimei'], aliases: [] },
+      'pc-otonal': { name: 'Otoñal', artists: ['ar-diblasio-2'], source: null, genres: ['latin'], keys: ['slug:otonal'], aliases: [] },
+      'pc-moonlight': { name: 'Piano Sonata No. 14 "Moonlight"', artists: ['ar-beethoven'], source: null, genres: ['classical'], keys: ['slug:moonlight-sonata'], aliases: ['Moonlight Sonata'] },
+      'pc-great-spirit': { name: 'Great Spirit', artists: ['ar-armin'], source: null, genres: ['electronic'], keys: ['slug:great-spirit'], aliases: [] },
+      'pc-lib': { name: 'Love Is a Bitch', artists: ['ar-twofeet'], source: null, genres: ['pop'], keys: ['slug:love-is-a-bitch'], aliases: [] },
+    },
+    programs: {
+      'pg-h19sp': { skater: 'sk-hanyu', season: '2019–20', seg: 'Short program', seq: 1, raw: 'Otoñal by Raúl di Blasio' },
+      'pg-h17fs': { skater: 'sk-hanyu', season: '2017–18', seg: 'Free skating', seq: 1, raw: 'Seimei (from Onmyoji) by Shigeru Umebayashi' },
+      'pg-u19sp': { skater: 'sk-uno', season: '2019–20', seg: 'Short program', seq: 1, raw: 'Great Spirit by Armin van Buuren vs Avian Grays' },
+      'pg-b19sp': { skater: 'sk-brown', season: '2019–20', seg: 'Short program', seq: 1, raw: 'Love Is a Bitch by Two Feet' },
+      'pg-by15fs': { skater: 'sk-bychenko', season: '2015–16', seg: 'Free skating', seq: 1, raw: '' },
+      'pg-by11fs': { skater: 'sk-bychenko-2', season: '2011–12', seg: 'Free skating', seq: 1, raw: '' },
+      'pg-pc14sd': { team: 'tm-pc', season: '2014–15', seg: 'Short dance', seq: 1, raw: 'Waltz medley' },
+      'pg-pc14fd': { team: 'tm-pc', season: '2014–15', seg: 'Free dance', seq: 1, raw: 'Moonlight Sonata by Ludwig van Beethoven' },
+    },
+    claims: {
+      'cl-1': { program: 'pg-h19sp', origin: 'wikipedia', arrs: [{ piece: 'pc-otonal', style: 'original' }] },
+      'cl-2': { program: 'pg-h17fs', origin: 'wikipedia', arrs: [{ piece: 'pc-seimei', style: 'original' }] },
+      'cl-3': { program: 'pg-pc14fd', origin: 'wikipedia', arrs: [{ piece: 'pc-moonlight', style: 'orchestral' }] },
+      'cl-4': { program: 'pg-u19sp', origin: 'wikipedia', arrs: [{ piece: 'pc-great-spirit', style: 'remix', artist: 'ar-armin' }] },
+      'cl-5': { program: 'pg-b19sp', origin: 'wikipedia', arrs: [{ piece: 'pc-lib', style: 'original' }] },
+    },
+    performances: {
+      'pf-1': hanyu('2019 Skate Canada', 1),
+      'pf-2': hanyu('2019 Grand Prix Final', 2),
+      'pf-3': hanyu('2020 Four Continents', 1),
+      'pf-4': { skater: 'sk-brown', program: 'pg-b19sp', season: '2019–20', comp: '2020 Four Continents', event: 'Men', seg: 'Short program', rank: 4, printed: 'BROWN Jason', nation: 'USA' },
+      'pf-5': hanyu('2019 Internationaux de France', 3, { printed: 'UNO Shoma' }),
+      'pf-6': { team: 'tm-pc', program: 'pg-pc14sd', season: '2014–15', comp: '2015 World Championships', event: 'Ice Dance', seg: 'Short dance', rank: 4, printed: 'PAPADAKIS Gabriella / CIZERON Guillaume', nation: 'FRA' },
+      'pf-7': { team: 'tm-pc', program: 'pg-pc14fd', season: '2014–15', comp: '2015 World Championships', event: 'Ice Dance', seg: 'Free dance', rank: 1, printed: 'PAPADAKIS Gabriella / CIZERON Guillaume', nation: 'FRA' },
+      'pf-8': { skater: 'sk-bychenko', program: 'pg-by15fs', season: '2015–16', comp: '2016 European Championships', event: 'Men', seg: 'Free skating', rank: 2, printed: 'BYCHENKO Alexei', nation: 'ISR' },
+      'pf-9': { skater: 'sk-bychenko-2', program: 'pg-by11fs', season: '2011–12', comp: '2012 European Championships', event: 'Men', seg: 'Free skating', rank: 18, printed: 'BYCHENKO Oleksii', nation: 'UKR' },
+      'pf-10': { skater: 'sk-hanyu', program: 'pg-h17fs', season: '2017–18', comp: '2018 Olympic Winter Games', event: 'Men', seg: 'Free skating', rank: 1, printed: 'HANYU Yuzuru', nation: 'JPN' },
+    },
+    videos: {
+      'v-1': { yt: '4CC2020menSP', start: 3610, perf: 'pf-3', origin: 'official', status: 'active' },
+      'v-2': { yt: '4CC2020menSP', start: 5420, perf: 'pf-4', origin: 'official', status: 'active' },
+      'v-3': { yt: 'GPF2019hanyuSP', start: 0, perf: 'pf-2', origin: 'official', status: 'active' },
+      'v-4': { yt: 'spamReupload1', start: 0, perf: 'pf-1', origin: 'submitted', status: 'active' },
+      'v-5': { yt: 'OWG2018menFS', start: 7200, perf: 'pf-10', origin: 'official', status: 'active' },
+    },
+    submissions: {
+      'sb-1': { kind: 'video', perf: 'pf-7', yt: 'fanPCmoonlight', hints: 'French TV broadcast, they start at 1:02', ip: 'a1f3c9', status: 'pending', at: '2 days ago' },
+      'sb-2': { kind: 'video', perf: 'pf-6', yt: 'shanghai15FD', hints: 'their free dance in Shanghai', ip: '77be01', status: 'pending', at: '1 day ago' },
+      'sb-3': { kind: 'video', perf: 'pf-3', yt: '4CC2020menSP', hints: 'full stream, Hanyu at 1:00:10', ip: 'c0ffee', status: 'pending', at: '5 hours ago' },
+      'sb-4': { kind: 'video', perf: 'pf-9', yt: 'euros2012byFS', hints: '', ip: 'a1f3c9', status: 'pending', at: '1 hour ago' },
+    },
+    flags: {
+      'fl-1': { target: { perf: 'pf-5' }, reason: 'This is Shoma Uno, not Yuzuru Hanyu', ip: '9d2e44', status: 'open', at: '3 days ago' },
+      'fl-2': { target: { video: 'v-2' }, reason: 'At this time the stream shows Keegan Messing; Jason Brown comes later', ip: '41aa07', status: 'open', at: '2 days ago' },
+      'fl-3': { target: { program: 'pg-h19sp' }, reason: 'At Four Continents 2020 he went back to Ballade No. 1, not Otoñal', ip: 'be11e5', status: 'open', at: '20 hours ago' },
+      'fl-4': { target: { program: 'pg-pc14fd' }, reason: "It's the piano version of the Moonlight Sonata, not orchestral", ip: 'a1f3c9', status: 'open', at: '2 hours ago' },
+    },
+    audit: [],
+  };
+  nav = { tab: 'queue', sel: null, rec: null, idx: 0, q: '', draft: {}, showDone: false };
+  change('Migrated from corrections file: piece alias', "'Seimei (Onmyoji)' → seimei", c => c.patch('pieces', 'pc-seimei', { aliases: ['Seimei (Onmyoji)'] }));
+  change('Migrated from corrections file: video hide', 'spamReupload1 on Hanyu 2019 Skate Canada SP', c => c.patch('videos', 'v-4', { status: 'hidden' }));
+}
+
+// ---------- audit log: every write goes through change() ----------
+function change(label, note, fn) {
+  const id = 'ch-' + (S.audit.length + 1), rows = [];
+  const set = (t, k, v) => {
+    rows.push({ t, k, before: S[t][k] ? JSON.stringify(S[t][k]) : null, after: v ? JSON.stringify(v) : null });
+    if (v) S[t][k] = v; else delete S[t][k];
+  };
+  const ctx = {
+    id, set,
+    patch: (t, k, p) => set(t, k, { ...S[t][k], ...p }),
+    add: (t, prefix, v) => { const k = prefix + '-' + Math.random().toString(36).slice(2, 6); set(t, k, v); return k; },
+  };
+  fn(ctx);
+  if (!rows.length) return null;
+  S.audit.unshift({ id, at: new Date().toLocaleTimeString(), label, note, rows, reverted_by: null });
+  return id;
+}
+
+// An Admin action: one change, plus resolving any ticked Flag on screen. Throws roll back.
+function act(label, fn) {
+  const note = val('note');
+  const resolve = [...document.querySelectorAll('input[data-resolve]:checked')].map(i => i.dataset.resolve.split(':'));
+  const snap = structuredClone(S);
+  try {
+    change(label, note, c => {
+      fn(c);
+      resolve.forEach(([t, k]) => S[t][k]?.status === 'open' && c.patch(t, k, { status: 'resolved', resolved_by: c.id }));
+    });
+  } catch (e) { S = snap; alert(e.message); }
+  render();
+}
+
+function revert(id) {
+  const ch = S.audit.find(c => c.id === id), last = {};
+  ch.rows.forEach(r => last[r.t + '/' + r.k] = r);
+  const bad = Object.values(last).filter(r => (S[r.t][r.k] ? JSON.stringify(S[r.t][r.k]) : null) !== r.after);
+  if (bad.length) {
+    const by = bad.map(r => {
+      const later = S.audit.filter(c => c !== ch && S.audit.indexOf(c) < S.audit.indexOf(ch) && c.rows.some(x => x.t === r.t && x.k === r.k)).map(c => c.id);
+      return `${r.t}/${r.k} (changed later by ${later.join(', ') || '?'})`;
+    });
+    return alert(`Revert refused: these rows changed since ${id}:\n${by.join('\n')}\nRevert those changes first, or fix by hand.`);
+  }
+  const rid = change(`Revert ${id}: ${ch.label}`, val('note'), c => [...ch.rows].reverse().forEach(r => c.set(r.t, r.k, r.before && JSON.parse(r.before))));
+  ch.reverted_by = rid;
+  render();
+}
+
+// ---------- helpers ----------
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const val = id => document.getElementById(id)?.value?.trim() ?? '';
+const checked = name => [...document.querySelectorAll(`input[name="${name}"]:checked`)].map(i => i.value);
+const same = (a, b) => a && b && a[0] === b[0] && a[1] === b[1];
+const ts = s => { const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, x = String(s % 60).padStart(2, '0'); return h ? `${h}:${String(m).padStart(2, '0')}:${x}` : `${m}:${x}`; };
+const parseTs = s => s.split(':').reduce((a, x) => a * 60 + (+x || 0), 0);
+const slugify = s => s.toLowerCase().normalize('NFD').replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '-');
+const ytId = s => (s.match(/(?:v=|youtu\.be\/)([\w-]{6,})/) || [, s])[1];
+const teamName = k => S.teams[k].skaters.map(s => S.skaters[s]?.name.split(' ').pop()).join(' / ');
+const own = r => r.team ? teamName(r.team) : S.skaters[r.skater]?.name ?? '?';
+const perfL = k => { const p = S.performances[k]; return p ? `${own(p)} · ${p.comp} · ${p.event} ${p.seg}` : `(${k} gone)`; };
+const progL = k => { const p = S.programs[k]; return p ? `${own(p)} · ${p.season} ${p.seg}${p.seq > 1 ? ' #' + p.seq : ''}` : `(${k} gone)`; };
+const TYPE = { skaters: 'Skater', teams: 'Team', performances: 'Performance', programs: 'Program', pieces: 'Piece', artists: 'Artist', sources: 'Source' };
+function recName(t, k) {
+  if (!S[t][k]) return `(${k} gone)`;
+  return t === 'teams' ? teamName(k) : t === 'performances' ? perfL(k) : t === 'programs' ? progL(k) : S[t][k].name;
+}
+const link = (t, k) => `<a href="#" onclick="go('${t}','${k}');return false">${esc(recName(t, k))}</a>`;
+const opts = (tbl, sel) => Object.entries(tbl).map(([k, r]) => `<option value="${k}" ${k === sel ? 'selected' : ''}>${esc(r.name)}</option>`).join('');
+const claimsFor = pg => Object.entries(S.claims).filter(([, c]) => c.program === pg).sort((a, b) => ORIGINS.indexOf(a[1].origin) - ORIGINS.indexOf(b[1].origin));
+const arrL = a => `${esc(S.pieces[a.piece]?.name ?? '?')} — ${a.style}${a.artist ? ' · perf. ' + esc(S.artists[a.artist]?.name) : ''}`;
+const ownerKey = r => r.team ? 'team:' + r.team : 'skater:' + r.skater;
+const nextSeq = (owner, season, seg) => 1 + Math.max(0, ...Object.values(S.programs).filter(p => ownerKey(p) === owner && p.season === season && p.seg === seg).map(p => p.seq));
+
+function go(t, k) { nav.tab = 'records'; nav.rec = [t, k]; nav.q = ''; render(); }
+function openAudit(id) { nav.tab = 'audit'; nav.openAudit = id; render(); }
+
+function queueItems(includeDone) {
+  return [
+    ...Object.keys(S.submissions).filter(k => includeDone || S.submissions[k].status === 'pending').map(k => ['submissions', k]),
+    ...Object.keys(S.flags).filter(k => includeDone || S.flags[k].status === 'open').map(k => ['flags', k]),
+  ];
+}
+function itemLabel(t, k) {
+  const x = S[t][k];
+  if (t === 'submissions') return { chip: 'Video Submission', title: perfL(x.perf), sub: x.hints || '(no hints)', at: x.at };
+  const g = x.target;
+  return {
+    chip: g.perf ? 'Flag · Performance' : g.video ? 'Flag · video' : 'Flag · music',
+    title: g.perf ? perfL(g.perf) : g.video ? perfL(S.videos[g.video]?.perf) : progL(g.program),
+    sub: x.reason, at: x.at,
+  };
+}
+function recordOf(t, k) {
+  const x = S[t][k];
+  if (t === 'submissions') return ['performances', x.perf];
+  return x.target.program ? ['programs', x.target.program] : ['performances', x.target.perf || S.videos[x.target.video]?.perf];
+}
+function recList() {
+  const q = nav.q.toLowerCase();
+  return Object.keys(TYPE).map(t => {
+    const hits = Object.keys(S[t]).filter(k => !q || (recName(t, k) + ' ' + (S[t][k].aliases || []).join(' ')).toLowerCase().includes(q));
+    return hits.length ? `<div class="grp">${TYPE[t]}s</div>` + hits.map(k => `<div class="li ${same(nav.rec, [t, k]) ? 'sel' : ''}" onclick="go('${t}','${k}')">${esc(recName(t, k))}</div>`).join('') : '';
+  }).join('');
+}
+
+// ---------- actions ----------
+function approveSb(k) {
+  const x = S.submissions[k], perf = val('sbT-' + k), start = parseTs(val('sbS-' + k));
+  act(`Approve Video Submission: ${perfL(perf)}`, c => {
+    c.add('videos', 'v', { yt: x.yt, start, perf, origin: 'submitted', status: 'active' });
+    c.patch('submissions', k, { status: 'approved', resolved_by: c.id, perf });
+  });
+}
+function rejectSb(k) { act(`Reject Video Submission: ${perfL(S.submissions[k].perf)}`, c => c.patch('submissions', k, { status: 'rejected', resolved_by: c.id })); }
+function dismissFl(k) { act(`Dismiss Flag: ${itemLabel('flags', k).title}`, c => c.patch('flags', k, { status: 'dismissed', resolved_by: c.id })); }
+function resolveFl(k) { act(`Resolve Flag (no data change): ${itemLabel('flags', k).title}`, c => c.patch('flags', k, { status: 'resolved', resolved_by: c.id })); }
+function hideVideo(k, hide) { act(`${hide ? 'Hide' : 'Unhide'} video ${S.videos[k].yt} on ${perfL(S.videos[k].perf)}`, c => c.patch('videos', k, { status: hide ? 'hidden' : 'active' })); }
+function setStart(k) { act(`Set video start: ${S.videos[k].yt} on ${perfL(S.videos[k].perf)}`, c => c.patch('videos', k, { start: parseTs(val('st-' + k)) })); }
+function addVideo(pf) {
+  const yt = ytId(val('nv-' + pf));
+  if (!yt) return alert('Paste a YouTube URL or ID');
+  act(`Add video: ${perfL(pf)}`, c => c.add('videos', 'v', { yt, start: parseTs(val('nvs-' + pf)), perf: pf, origin: 'admin', status: 'active' }));
+}
+function movePerf(k) {
+  const v = val('mv-' + k), pf = S.performances[k];
+  act(`Move Performance: ${perfL(k)}`, c => {
+    let pg = v.slice(3);
+    if (v.startsWith('new:')) {
+      const [, f, o] = v.split(':');
+      pg = c.add('programs', 'pg', { [f]: o, season: pf.season, seg: pf.seg, seq: nextSeq(f + ':' + o, pf.season, pf.seg), raw: '' });
+    }
+    const P = S.programs[pg];
+    c.patch('performances', k, { program: pg, skater: P.skater, team: P.team });
+  });
+}
+function splitProgram(k) {
+  const ids = checked('sp-' + k), P = S.programs[k];
+  if (!ids.length) return alert('Tick the Performances that used the new music');
+  const seq = nextSeq(ownerKey(P), P.season, P.seg);
+  act(`Split Program: ${progL(k)} → #${seq}`, c => {
+    const nk = c.add('programs', 'pg', { ...P, seq, raw: '' });
+    ids.forEach(p => c.patch('performances', p, { program: nk }));
+  });
+}
+function saveMusic(k) {
+  const d = nav.draft[k], raw = S.programs[k].raw, aliasRaw = document.getElementById('alias-' + k)?.checked;
+  act(`Edit music: ${progL(k)}`, c => {
+    const arrs = d.map(a => {
+      let piece = a.piece;
+      if (!piece) throw Error('Every Arrangement needs a Piece');
+      if (piece === '__new') {
+        if (!a.newTitle) throw Error('A new Piece needs a title');
+        piece = c.add('pieces', 'pc', { name: a.newTitle, artists: a.newArtist ? [a.newArtist] : [], source: a.newSource || null, genres: a.newGenre ? [a.newGenre] : [], keys: ['slug:' + slugify(a.newTitle)], aliases: [] });
+      }
+      return a.artist ? { piece, style: a.style, artist: a.artist } : { piece, style: a.style };
+    });
+    const ex = Object.keys(S.claims).find(x => S.claims[x].program === k && S.claims[x].origin === 'admin');
+    ex ? c.patch('claims', ex, { arrs }) : c.add('claims', 'cl', { program: k, origin: 'admin', arrs });
+    const p = S.pieces[arrs[0]?.piece];
+    if (aliasRaw && raw && p && !p.aliases.includes(raw)) c.patch('pieces', arrs[0].piece, { aliases: [...p.aliases, raw] });
+  });
+  delete nav.draft[k];
+  render();
+}
+function dset(k, i, f, v) { nav.draft[k][i][f] = v; render(); }
+function dmove(k, i, d) { const a = nav.draft[k], j = i + d; if (j < 0 || j >= a.length) return; [a[i], a[j]] = [a[j], a[i]]; render(); }
+function ddel(k, i) { nav.draft[k].splice(i, 1); render(); }
+function dadd(k) { nav.draft[k].push({ piece: '', style: 'original' }); render(); }
+function rename(t, k) {
+  const name = val('rn'), r = S[t][k];
+  if (!name || name === r.name) return;
+  act(`Rename ${TYPE[t]}: ${r.name} → ${name}`, c => c.patch(t, k, { name, aliases: [...new Set([...r.aliases, r.name])] }));
+}
+function addAlias(t, k) {
+  const a = val('na');
+  if (a) act(`Add alias to ${recName(t, k)}: ${a}`, c => c.patch(t, k, { aliases: [...S[t][k].aliases, a] }));
+}
+
+function repoint(c, t, from, to) {
+  const scan = (tbl, f) => Object.entries(S[tbl]).forEach(([k, r]) => { const x = structuredClone(r); if (f(x)) c.set(tbl, k, x); });
+  const sw = v => v === from ? to : v;
+  if (t === 'skaters') {
+    scan('performances', x => x.skater === from && (x.skater = to, 1));
+    scan('programs', x => x.skater === from && (x.skater = to, 1));
+    scan('teams', x => x.skaters.includes(from) && (x.skaters = x.skaters.map(sw), 1));
+  }
+  if (t === 'teams') {
+    scan('performances', x => x.team === from && (x.team = to, 1));
+    scan('programs', x => x.team === from && (x.team = to, 1));
+  }
+  if (t === 'pieces') scan('claims', x => x.arrs.some(a => a.piece === from) && (x.arrs.forEach(a => a.piece = sw(a.piece)), 1));
+  if (t === 'artists') {
+    scan('pieces', x => x.artists.includes(from) && (x.artists = x.artists.map(sw), 1));
+    scan('claims', x => x.arrs.some(a => a.artist === from) && (x.arrs.forEach(a => a.artist = sw(a.artist)), 1));
+  }
+  if (t === 'sources') scan('pieces', x => x.source === from && (x.source = to, 1));
+}
+function mergePreview(t, keep, lose) {
+  let n = 0;
+  repoint({ set: () => n++ }, t, lose, keep);
+  const L = S[t][lose], names = [...(L.name ? [L.name] : []), ...L.aliases];
+  let s = `Moves keys ${L.keys.map(x => `<code>${x}</code>`).join(' ')} and names "${names.map(esc).join('", "')}" to this record, repoints ${n} linked row(s), deletes ${esc(recName(t, lose))}. One audit change.`;
+  if (t === 'skaters' || t === 'teams') {
+    const f = t === 'skaters' ? 'skater' : 'team', seen = {}, coll = [];
+    Object.values(S.programs).filter(p => [keep, lose].includes(p[f])).forEach(p => { const key = p.season + ' ' + p.seg + ' #' + p.seq; seen[key] ? coll.push(key) : seen[key] = 1; });
+    if (coll.length) s += `<br><span class="warn">Both have a Program for ${coll.join(', ')}: after the merge two Programs share one key. Needs a Program merge (not in this prototype).</span>`;
+  }
+  return s;
+}
+function merge(t, keep, lose) {
+  act(`Merge ${TYPE[t]}: ${recName(t, lose)} → ${recName(t, keep)}`, c => {
+    const L = S[t][lose], W = S[t][keep];
+    c.patch(t, keep, { keys: [...W.keys, ...L.keys], aliases: [...new Set([...W.aliases, ...(L.name ? [L.name] : []), ...L.aliases])] });
+    repoint(c, t, lose, keep);
+    c.set(t, lose, null);
+  });
+  nav.mergeFrom = null;
+  render();
+}
+function splitSkater(k) {
+  const pfs = checked('ss-' + k), keys = checked('sk-' + k), name = val('ssn-' + k), from = S.skaters[k];
+  if (!pfs.length || !name) return alert('Tick Performances and give the new Skater a name');
+  act(`Split Skater: ${name} out of ${from.name}`, c => {
+    const nk = c.add('skaters', 'sk', { name, nation: from.nation, keys: [...keys, 'slug:' + slugify(name)], aliases: [] });
+    c.patch('skaters', k, { keys: from.keys.filter(x => !keys.includes(x)) });
+    new Set(pfs.map(p => S.performances[p].program)).forEach(pg => {
+      const all = Object.keys(S.performances).filter(p => S.performances[p].program === pg);
+      if (!all.every(p => pfs.includes(p))) throw Error(`Program "${progL(pg)}" has Performances on both sides. Split the Program first.`);
+      c.patch('programs', pg, { skater: nk });
+    });
+    pfs.forEach(p => c.patch('performances', p, { skater: nk }));
+  });
+}
+
+// ---------- shared screens ----------
+const noteBox = () => `<div class="note"><input id="note" placeholder="Note for the audit log (optional, attached to your next action)"></div>`;
+
+function itemView(t, k, embed = true) {
+  const x = S[t][k], L = itemLabel(t, k), done = !['pending', 'open'].includes(x.status);
+  let h = `<div class="item ${done ? 'done' : ''}"><div class="itemhead"><span class="chip ${t}">${L.chip}</span> <b>${esc(L.title)}</b> <span class="muted small">${x.at} · ip #${x.ip}</span></div>`;
+  if (done) h += `<p>Status: <b>${x.status}</b>${x.resolved_by ? ` in <a href="#" onclick="openAudit('${x.resolved_by}');return false">${x.resolved_by}</a>` : ''}</p>`;
+  if (t === 'submissions') {
+    h += `<div class="yt">▶ youtube.com/watch?v=${esc(x.yt)}<br><span class="small">(embed here)</span></div><p>Hints: <i>${esc(x.hints || 'none')}</i></p>`;
+    const same = Object.values(S.videos).filter(v => v.yt === x.yt);
+    if (same.length) h += `<p class="warn">This YouTube video is already linked: ${same.map(v => `${ts(v.start)} → ${esc(perfL(v.perf))} (${v.origin}, ${v.status})`).join('; ')}</p>`;
+    if (!done) h += `<div class="row">Performance <select id="sbT-${k}">${Object.keys(S.performances).map(p => `<option value="${p}" ${p === x.perf ? 'selected' : ''}>${esc(perfL(p))}</option>`).join('')}</select>
+      starts at <input id="sbS-${k}" size="8" placeholder="h:mm:ss"> <button class="pri" onclick="approveSb('${k}')">Approve</button> <button onclick="rejectSb('${k}')">Reject</button></div>`;
+    if (embed) h += `<h4>Videos already on ${esc(perfL(x.perf))}</h4>` + videoTable(x.perf);
+  } else {
+    h += `<blockquote>${esc(x.reason)}</blockquote>`;
+    if (!done) h += `<div class="row"><label><input type="checkbox" data-resolve="flags:${k}" checked> my next change resolves this Flag</label>
+      <button onclick="dismissFl('${k}')">Dismiss</button> <button onclick="resolveFl('${k}')">Resolved, no change needed</button></div>`;
+    if (embed) { const g = x.target; h += g.program ? programEditor(g.program) : perfEditor(g.perf || S.videos[g.video].perf, g.video); }
+  }
+  return h + '</div>';
+}
+
+function videoTable(pf, focus) {
+  const vs = Object.entries(S.videos).filter(([, v]) => v.perf === pf);
+  const plays = vs.filter(([, v]) => v.status === 'active').sort((a, b) => PLAY_ORDER.indexOf(a[1].origin) - PLAY_ORDER.indexOf(b[1].origin))[0]?.[0];
+  let h = `<table><tr><th>YouTube</th><th>Start</th><th>Origin</th><th>Status</th><th></th></tr>`;
+  vs.forEach(([k, v]) => {
+    const others = Object.values(S.videos).filter(o => o.yt === v.yt && o.perf !== pf).length;
+    h += `<tr class="${k === focus ? 'focus' : ''} ${v.status}"><td>${esc(v.yt)} ${k === plays ? '<span class="win">plays</span>' : ''}${others ? `<div class="muted small">same stream on ${others} other Performance(s); hiding here leaves those</div>` : ''}</td>
+      <td><input id="st-${k}" size="8" value="${ts(v.start)}"> <button onclick="setStart('${k}')">Set</button></td><td>${v.origin}</td><td>${v.status}</td>
+      <td><button onclick="hideVideo('${k}', ${v.status === 'active'})">${v.status === 'active' ? 'Hide' : 'Unhide'}</button></td></tr>`;
+  });
+  if (!vs.length) h += `<tr><td colspan="5" class="muted">No video yet</td></tr>`;
+  return h + `</table><div class="row">Add video <input id="nv-${pf}" placeholder="YouTube URL or ID"> at <input id="nvs-${pf}" size="8" placeholder="h:mm:ss"> <button onclick="addVideo('${pf}')">Add as Admin</button></div>`;
+}
+
+function perfEditor(k, fv) {
+  const p = S.performances[k];
+  if (!p) return '<p class="muted">This Performance no longer exists.</p>';
+  const owners = [...Object.keys(S.skaters).map(o => ['skater', o, S.skaters[o].name]), ...Object.keys(S.teams).map(o => ['team', o, teamName(o)])];
+  // shortcut: one <select> of every owner; the real screen needs a search picker
+  const moveOpts = owners.map(([f, o, name]) => {
+    const pgs = Object.keys(S.programs).filter(pg => S.programs[pg][f] === o && S.programs[pg].season === p.season && S.programs[pg].seg === p.seg);
+    return `<optgroup label="${esc(name)}">${pgs.map(pg => `<option value="pg:${pg}" ${pg === p.program ? 'selected' : ''}>${esc(progL(pg))}</option>`).join('')}<option value="new:${f}:${o}">＋ new ${p.season} ${p.seg} Program for ${esc(name)}</option></optgroup>`;
+  }).join('');
+  return `<section><h3>Performance: ${esc(perfL(k))}</h3>
+    <p class="muted">As printed by ISU: ${esc(p.printed)} (${p.nation}) · rank ${p.rank} · Season ${p.season}</p>
+    <p>${p.team ? 'Team' : 'Skater'}: ${link(p.team ? 'teams' : 'skaters', p.team || p.skater)} · Program: ${link('programs', p.program)}</p>
+    <div class="row">Belongs to Program <select id="mv-${k}">${moveOpts}</select> <button onclick="movePerf('${k}')">Move</button>
+      <span class="muted small">(moving to another Skater's Program is how a Performance is reassigned)</span></div>
+    <h4>Videos</h4>${videoTable(k, fv)}</section>`;
+}
+
+function programEditor(k) {
+  const P = S.programs[k];
+  if (!P) return '<p class="muted">This Program no longer exists.</p>';
+  const cl = claimsFor(k);
+  const d = nav.draft[k] ??= cl[0] ? structuredClone(cl[0][1].arrs) : [{ piece: '', style: 'original' }];
+  const pfs = Object.keys(S.performances).filter(p => S.performances[p].program === k);
+  const row = (a, i) => `<div class="arr">${i + 1}. Piece <select onchange="dset('${k}',${i},'piece',this.value)"><option value="">— pick —</option>${opts(S.pieces, a.piece)}<option value="__new" ${a.piece === '__new' ? 'selected' : ''}>＋ new Piece…</option></select>
+      Style <select onchange="dset('${k}',${i},'style',this.value)">${STYLES.map(s => `<option ${s === a.style ? 'selected' : ''}>${s}</option>`).join('')}</select>
+      Performer <select onchange="dset('${k}',${i},'artist',this.value)"><option value="">none</option>${opts(S.artists, a.artist)}</select>
+      <button onclick="dmove('${k}',${i},-1)">↑</button><button onclick="dmove('${k}',${i},1)">↓</button><button onclick="ddel('${k}',${i})">✕</button>
+      ${a.piece === '__new' ? `<div class="newpiece">Title <input value="${esc(a.newTitle)}" onchange="dset('${k}',${i},'newTitle',this.value)">
+        Composer <select onchange="dset('${k}',${i},'newArtist',this.value)"><option value="">—</option>${opts(S.artists, a.newArtist)}</select>
+        Source <select onchange="dset('${k}',${i},'newSource',this.value)"><option value="">none</option>${opts(S.sources, a.newSource)}</select>
+        Genre <input size="10" value="${esc(a.newGenre)}" onchange="dset('${k}',${i},'newGenre',this.value)"></div>` : ''}</div>`;
+  return `<section><h3>Program: ${esc(progL(k))}</h3>
+    <p>${P.team ? 'Team' : 'Skater'}: ${link(P.team ? 'teams' : 'skaters', P.team || P.skater)}</p>
+    <p>Raw music text: <code>${esc(P.raw) || '(none, e.g. created by a split)'}</code></p>
+    <h4>Music claims (highest origin is shown)</h4><table>${cl.map(([, c], i) => `<tr><td>${c.origin} ${i === 0 ? '<span class="win">shown</span>' : ''}</td><td>${c.arrs.map(arrL).join('<br>')}</td></tr>`).join('') || '<tr><td class="muted">No music yet</td></tr>'}</table>
+    <h4>Edit music (saved as the Admin claim, wins over all others)</h4>${d.map(row).join('')}
+    <div class="row"><button onclick="dadd('${k}')">＋ Arrangement</button>
+      <label><input type="checkbox" id="alias-${k}"> also add the raw text as an alias of the first Piece</label>
+      <button class="pri" onclick="saveMusic('${k}')">Save music</button></div>
+    <h4>Performances of this Program</h4>${pfs.map(p => `<label class="line"><input type="checkbox" name="sp-${k}" value="${p}"> ${link('performances', p)}</label>`).join('') || '<p class="muted">none</p>'}
+    <div class="row"><button onclick="splitProgram('${k}')">Split ticked into a new Program (mid-season music change)</button></div></section>`;
+}
+
+function usage(t, k) {
+  const r = S[t][k], progsOf = f => Object.keys(S.programs).filter(p => S.programs[p][f] === k).map(p => link('programs', p)).join('<br>') || '—';
+  if (t === 'skaters') return `<h4>Teams</h4>${Object.keys(S.teams).filter(x => S.teams[x].skaters.includes(k)).map(x => link('teams', x)).join(', ') || '—'}<h4>Programs</h4>${progsOf('skater')}`;
+  if (t === 'teams') return `<h4>Skaters</h4>${r.skaters.map(s => link('skaters', s)).join(' + ')}<h4>Programs</h4>${progsOf('team')}`;
+  if (t === 'pieces') return `<p>Composer: ${r.artists.map(a => link('artists', a)).join(', ') || '—'} · Source: ${r.source ? link('sources', r.source) : '—'} · Genres: ${r.genres.join(', ') || '—'}</p>
+    <h4>Used by</h4>${Object.values(S.claims).filter(c => c.arrs.some(a => a.piece === k)).map(c => `${link('programs', c.program)} <span class="muted small">(${c.origin})</span>`).join('<br>') || '—'}`;
+  if (t === 'artists') return `<h4>Composer of</h4>${Object.keys(S.pieces).filter(p => S.pieces[p].artists.includes(k)).map(p => link('pieces', p)).join(', ') || '—'}`;
+  if (t === 'sources') return `<h4>Pieces</h4>${Object.keys(S.pieces).filter(p => S.pieces[p].source === k).map(p => link('pieces', p)).join(', ') || '—'}`;
+  return '';
+}
+
+function recordView(t, k) {
+  if (t === 'performances') return perfEditor(k);
+  if (t === 'programs') return programEditor(k);
+  const r = S[t][k];
+  if (!r) return '<p class="muted">This record no longer exists (merged away or reverted).</p>';
+  const others = Object.keys(S[t]).filter(o => o !== k), mf = nav.mergeFrom?.[0] === t && others.includes(nav.mergeFrom[1]) ? nav.mergeFrom[1] : '';
+  let h = `<section><h3>${TYPE[t]}: ${esc(recName(t, k))}</h3>`;
+  if (t !== 'teams') h += `<div class="row">Name <input id="rn" value="${esc(r.name)}"> <button onclick="rename('${t}','${k}')">Rename</button> <span class="muted small">old name is kept as an alias</span></div>`;
+  h += `<p>Keys: ${r.keys.map(x => `<code>${x}</code>`).join(' ')}</p><div class="row">Aliases: ${r.aliases.map(esc).join(', ') || '—'} <input id="na" placeholder="new alias"> <button onclick="addAlias('${t}','${k}')">Add</button></div>`;
+  h += usage(t, k);
+  h += `<h4>Merge a duplicate into this ${TYPE[t]}</h4><div class="row"><select onchange="nav.mergeFrom=['${t}',this.value];render()"><option value="">— pick the duplicate —</option>${others.map(o => `<option value="${o}" ${o === mf ? 'selected' : ''}>${esc(recName(t, o))}</option>`).join('')}</select>
+    ${mf ? `<button class="pri" onclick="merge('${t}','${k}','${mf}')">Merge into ${esc(recName(t, k))}</button></div><p class="small">${mergePreview(t, k, mf)}</p>` : '</div>'}`;
+  if (t === 'skaters') {
+    const pfs = Object.keys(S.performances).filter(p => S.performances[p].skater === k);
+    h += `<h4>Split: this record is really two people</h4>${pfs.map(p => `<label class="line"><input type="checkbox" name="ss-${k}" value="${p}"> ${link('performances', p)}</label>`).join('')}
+      <div class="row">Keys that go with them: ${r.keys.filter(x => !x.startsWith('slug:')).map(x => `<label><input type="checkbox" name="sk-${k}" value="${x}"> <code>${x}</code></label>`).join(' ') || '—'}</div>
+      <div class="row">New Skater name <input id="ssn-${k}"> <button onclick="splitSkater('${k}')">Split ticked into new Skater</button></div>`;
+  }
+  return h + '</section>';
+}
+
+function auditList(chs) {
+  const diff = r => {
+    const b = r.before ? JSON.parse(r.before) : {}, a = r.after ? JSON.parse(r.after) : {};
+    const ks = [...new Set([...Object.keys(b), ...Object.keys(a)])].filter(x => JSON.stringify(b[x]) !== JSON.stringify(a[x]));
+    return `<div class="diff"><code>${r.t}/${r.k}</code> ${!r.before ? 'created' : !r.after ? 'deleted' : 'changed'}${ks.map(x => `<div>${x}: <del>${esc(JSON.stringify(b[x]) ?? '')}</del> → <ins>${esc(JSON.stringify(a[x]) ?? '')}</ins></div>`).join('')}</div>`;
+  };
+  return chs.map(ch => `<details class="ch" ${nav.openAudit === ch.id ? 'open' : ''}><summary><code>${ch.id}</code> <span class="muted small">${ch.at}</span> <b>${esc(ch.label)}</b> ${ch.note ? `<i>“${esc(ch.note)}”</i>` : ''} <span class="muted small">${ch.rows.length} row(s)</span>
+    ${ch.reverted_by ? `<span class="chip">reverted by ${ch.reverted_by}</span>` : `<button onclick="event.preventDefault();revert('${ch.id}')">Revert</button>`}</summary>${ch.rows.map(diff).join('')}</details>`).join('') || '<p class="muted">No changes yet</p>';
+}
+
+// ---------- the three shells ----------
+function tabs(list) {
+  return `<header><b>iceskatesong admin</b><nav>${list.map(([k, l]) => `<a class="${nav.tab === k ? 'on' : ''}" href="#" onclick="nav.tab='${k}';render();return false">${l}</a>`).join('')}</nav></header>`;
+}
+function recordsPane() {
+  return `<div class="split"><aside><input placeholder="Search records…" value="${esc(nav.q)}" oninput="nav.q=this.value;document.getElementById('rl').innerHTML=recList()"><div id="rl">${recList()}</div></aside>
+    <main>${noteBox()}${nav.rec ? recordView(...nav.rec) : '<p class="muted">Pick a record</p>'}</main></div>`;
+}
+
+function shellA() {
+  const pending = queueItems(false), q = queueItems(nav.showDone);
+  const top = tabs([['queue', `Review Queue (${pending.length})`], ['records', 'Records'], ['audit', 'Audit log']]);
+  if (nav.tab === 'records') return top + recordsPane();
+  if (nav.tab === 'audit') return top + `<main class="wide">${noteBox()}${auditList(S.audit)}</main>`;
+  nav.tab = 'queue';
+  if (!nav.sel || !S[nav.sel[0]]?.[nav.sel[1]]) nav.sel = q[0];
+  return top + `<div class="split"><aside><label class="muted small"><input type="checkbox" ${nav.showDone ? 'checked' : ''} onchange="nav.showDone=this.checked;render()"> show resolved</label>
+    ${q.map(([t, k]) => { const L = itemLabel(t, k); return `<div class="li ${same(nav.sel, [t, k]) ? 'sel' : ''} ${S[t][k].status}" onclick="nav.sel=['${t}','${k}'];render()"><span class="chip ${t}">${L.chip}</span> <span class="muted small">${L.at}</span><div>${esc(L.title)}</div><div class="muted small">${esc(L.sub)}</div></div>`; }).join('') || '<p class="muted">Queue empty.</p>'}</aside>
+    <main>${noteBox()}${nav.sel ? itemView(...nav.sel) : ''}</main></div>`;
+}
+
+function shellB() {
+  const pending = queueItems(false);
+  const top = `<header><b>iceskatesong admin</b><div class="searchwrap"><input placeholder="Find a Skater, Team, Performance, Program, Piece, Artist or Source…" value="${esc(nav.q)}" oninput="nav.q=this.value;document.getElementById('bres').innerHTML=nav.q?recList():''"><div id="bres" class="dropdown">${nav.q ? recList() : ''}</div></div>
+    <nav><a class="${!['records', 'audit'].includes(nav.tab) ? 'on' : ''}" href="#" onclick="nav.tab='home';render();return false">Needs attention (${pending.length})</a><a class="${nav.tab === 'audit' ? 'on' : ''}" href="#" onclick="nav.tab='audit';render();return false">Audit log</a></nav></header>`;
+  if (nav.tab === 'audit') return top + `<main class="wide">${noteBox()}${auditList(S.audit)}</main>`;
+  if (nav.tab === 'records' && nav.rec) {
+    const [t, k] = nav.rec, items = pending.filter(([it, ik]) => same(recordOf(it, ik), nav.rec));
+    return top + `<main class="wide">${noteBox()}${items.map(([it, ik]) => itemView(it, ik, false)).join('')}${recordView(t, k)}
+      <h4>History of this record</h4>${auditList(S.audit.filter(ch => ch.rows.some(r => r.k === k || (r.before + r.after).includes('"' + k + '"'))))}</main>`;
+  }
+  const groups = {};
+  pending.forEach(([t, k]) => { const r = recordOf(t, k); (groups[r.join('/')] ??= { r, items: [] }).items.push([t, k]); });
+  return top + `<main class="wide"><h3>Records that need attention</h3>${Object.values(groups).map(g => `<div class="li" onclick="go('${g.r[0]}','${g.r[1]}')"><span class="muted small">${TYPE[g.r[0]]}</span> <b>${esc(recName(...g.r))}</b> ${g.items.map(([t, k]) => `<span class="chip ${t}">${itemLabel(t, k).chip}</span>`).join(' ')}
+    <div class="muted small">${g.items.map(([t, k]) => esc(itemLabel(t, k).sub)).join(' · ')}</div></div>`).join('') || '<p class="muted">Nothing pending.</p>'}
+    <h3>Recent changes</h3>${auditList(S.audit.slice(0, 5))}</main>`;
+}
+
+function shellC() {
+  const q = queueItems(false);
+  const menu = l => `<a href="#" onclick="nav.tab='${l}';render();return false">${{ queue: 'Queue', records: 'Records', audit: 'Audit log' }[l]}</a>`;
+  nav.idx = Math.max(0, Math.min(nav.idx, q.length - 1));
+  const top = `<header class="c"><b>${nav.tab === 'records' || nav.tab === 'audit' ? 'iceskatesong admin' : `Review Queue · ${q.length ? `${nav.idx + 1} of ${q.length}` : 'empty'}`}</b><span>${['queue', 'records', 'audit'].map(menu).join(' · ')}</span></header>`;
+  if (nav.tab === 'records') return top + recordsPane();
+  if (nav.tab === 'audit') return top + `<main class="wide">${noteBox()}${auditList(S.audit)}</main>`;
+  nav.tab = 'queue';
+  const cur = q[nav.idx];
+  return top + `<main class="card">${cur ? noteBox() + itemView(...cur) : '<p class="big">Queue empty. Nothing to review.</p>'}</main>
+    <p class="keys muted">A approve · X reject · D dismiss · J next · K previous (keys work when no field is focused)</p>`;
+}
+
+function render() {
+  document.getElementById('app').innerHTML = { A: shellA, B: shellB, C: shellC }[variant]();
+  document.getElementById('vlabel').textContent = `${variant} · ${VARIANTS[variant]}`;
+}
+function cycle(d) {
+  const ks = Object.keys(VARIANTS);
+  variant = ks[(ks.indexOf(variant) + d + ks.length) % ks.length];
+  try { const u = new URL(location); u.searchParams.set('variant', variant); history.replaceState(null, '', u); } catch { }
+  render();
+}
+document.addEventListener('keydown', e => {
+  if (e.target.closest('input,textarea,select,[contenteditable]') || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') return cycle(e.key === 'ArrowRight' ? 1 : -1);
+  if (variant !== 'C' || ['records', 'audit'].includes(nav.tab)) return;
+  const cur = queueItems(false)[nav.idx];
+  if (!cur) return;
+  const [t, k] = cur;
+  const f = { j: () => { nav.idx++; render(); }, k: () => { nav.idx--; render(); }, a: () => t === 'submissions' && approveSb(k), x: () => t === 'submissions' && rejectSb(k), d: () => t === 'flags' && dismissFl(k) }[e.key];
+  f?.();
+});
+seed();
+render();
+</script>
+</body>
+</html>
