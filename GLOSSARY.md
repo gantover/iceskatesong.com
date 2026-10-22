@@ -34,4 +34,4 @@
 
 **Admin**: The person who resolves the Review Queue and corrects data (reassign, merge, split, edit). Every Admin change is logged and reversible.
 
-_Avoid_: "song" for Piece (many Pieces aren't songs); "routine" for Program; "skate" for Performance.
+_Avoid_: "song" for Piece (many Pieces aren't songs); "routine" for Program; "skate" for Performance; bare "source" for where data comes from (say "data source": Source is the film, musical or ballet a Piece comes from).
