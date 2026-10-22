@@ -1,0 +1,28 @@
+events: 19 | segments: 164 | entries: 2756
+videos: 30890
+[('outside sample', 19809), ('skipped: not a single Performance', 5122), ('skipped: not figure skating', 2601), ('matched', 2198), ('no entry match', 678), ('segment-level (no skater named)', 418), ('unverified (date+name only)', 45), ('ambiguous', 19)]
+
+per-skater videos in sampled events: 2940, matched 2198 (75%)
+RECALL on per-skater videos whose title names a sampled event: 2197/2225 (99%)
+  misses: Counter({'ambiguous': 19, 'no entry match': 9})
+matched via: Counter({'date': 2197, 'city+year': 1}) | title names the event: Counter({True: 2198})
+Performances in sample: 2756, with a video: 2098, with >1 video: 100
+  jgpaus2011                   2011-09-07  100 perfs   99 with video (99%)
+  season1516_jgppol2015        2015-09-23  172 perfs  170 with video (99%)
+  season1617_wc2017            2017-03-27  217 perfs    1 with video (0%)
+  season1920_fc2020            2020-02-04  144 perfs   23 with video (16%)
+  season1920_gpcan2019         2019-10-24   84 perfs   23 with video (27%)
+  season1920_wjc2020           2020-03-02  212 perfs   24 with video (11%)
+  season2122_gpusa2021         2021-10-21   80 perfs   79 with video (99%)
+  season2223_gpf2022           2022-12-08   96 perfs   91 with video (95%)
+  season2324_gpusa2023         2023-10-20   82 perfs   48 with video (59%)
+  season2425_jgptur2024        2024-09-18  182 perfs  182 with video (100%)
+  season2425_wc2025            2025-03-25  219 perfs  217 with video (99%)
+  season2425_wtt2025           2025-04-17   72 perfs   72 with video (100%)
+  season2526_ec2026            2026-01-13  196 perfs  192 with video (98%)
+  season2526_fc2026            2026-01-21  146 perfs  146 with video (100%)
+  season2526_gpchn2025         2025-10-24   82 perfs   80 with video (98%)
+  season2526_gpf2025           2025-12-04   96 perfs   96 with video (100%)
+  season2526_wjc2026           2026-03-03  226 perfs  208 with video (92%)
+  season2627_jgpgeo2026        2026-09-24  158 perfs  157 with video (99%)
+  season2627_jgppol2026        2026-10-08  192 perfs  190 with video (99%)
