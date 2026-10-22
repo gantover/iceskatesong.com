@@ -30,7 +30,9 @@
 
 **Genre**: A descriptive tag on a Piece (e.g. classical, pop, tango).
 
-**Submission**: A contribution from a visitor: a YouTube URL plus optional hints. Either a **Video Submission** ("this video is this Performance") or a **Music Submission** ("this Program uses these Arrangements").
+**Submission**: A contribution from a visitor. Either a **Video Submission** (a YouTube URL plus optional hints: "this video is this Performance") or a **Music Submission** (free music text plus an optional link: "this Program uses this music"). An approved Music Submission becomes the Program's music unless the Admin has set it directly.
+
+**Match grade**: How well a Program's link to a Piece is backed: **identified** (the Piece is anchored to an external ID), **credited** (a composer or Source is known), or **title only**. It reflects the data behind the link, not who made it: a Piece the Admin picked still shows title only until it gains an Artist, Source or external ID.
 
 **Flag**: A visitor's report that a Performance, video, or music is wrongly assigned. It stays open until the Admin resolves or dismisses it.
 
