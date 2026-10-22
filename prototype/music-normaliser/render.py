@@ -27,8 +27,9 @@ def piece_str(x):
     return " · ".join(bits)
 
 
-def radios(name, opts):
-    return "".join(f"<label><input type=radio name='{name}' value='{v}'> {v}</label>" for v in opts) + \
+def radios(name, opts):  # first option pre-checked: only the wrong ones need a click
+    return "".join(f"<label><input type=radio name='{name}' value='{v}'{' checked' if i == 0 else ''}> {v}</label>"
+                   for i, v in enumerate(opts)) + \
         f"<input class=note name='{name}:note' placeholder='note'>"
 
 
@@ -38,7 +39,7 @@ def variants(pid):
 
 
 # 1. random entries
-sample = rng.sample(R["rows"], 50)
+sample = rng.sample(R["rows"], 20)
 s1 = "".join(
     f"<tr><td class=meta>{esc(r['article'])}<br>{esc(r['season'])} {esc(r['segment'])}<br>tier: {esc(r['tier'] or '')}"
     f"{' (unsure)' if r['unsure'] else ''}</td><td class=raw>{esc(r['raw'])}</td>"
@@ -49,22 +50,13 @@ s1 = "".join(
 merged = [p for p in R["pieces"] if len(p["variants"]) > 1]
 s2 = "".join(f"<tr><td class=meta>#{p['id']}<br>{p['uses']} uses<br>{esc(', '.join(p['hows']))}</td>"
              f"<td>{variants(p['id'])}</td><td>{radios('m' + str(p['id']), ['one Piece', 'false merge'])}</td></tr>"
-             for p in rng.sample(merged, min(30, len(merged))))
-
-# 3. LLM pair verdicts
-pairs = R["near"]
-yes = [x for x in pairs if x.get("same")]
-no = [x for x in pairs if x.get("same") is False]
-pick = rng.sample(yes, min(15, len(yes))) + rng.sample(no, min(15, len(no)))
-s3 = "".join(f"<tr><td class=meta>{esc(x['why'])}<br>title score {x['score']}<br>LLM: <b>{'same' if x.get('same') else 'different'}</b></td>"
-             f"<td>{'<br>'.join(esc(v) for v in x['a'])}</td><td>{'<br>'.join(esc(v) for v in x['b'])}</td>"
-             f"<td>{radios('p' + x['id'], ['same Piece', 'different'])}</td></tr>" for x in pick)
+             for p in rng.sample(merged, min(10, len(merged))))
 
 # 4. missed duplicates: random Pieces with their closest other Pieces by title
 titles = [p["variants"][0][0] for p in R["pieces"]]
 ids = [p["id"] for p in R["pieces"]]
 s4 = ""
-for p in rng.sample(R["pieces"], 30):
+for p in rng.sample(R["pieces"], 10):
     near = [ids[i] for _, sc, i in process.extract(p["variants"][0][0], titles, scorer=fuzz.token_set_ratio, limit=4)
             if ids[i] != p["id"]][:3]
     s4 += (f"<tr><td>{variants(p['id'])}</td><td>" +
@@ -91,20 +83,19 @@ h2{{margin-top:2em}} pre{{background:var(--tag);padding:8px;overflow:auto}} butt
 </style>
 <div id=bar><button onclick=exportLabels()>Copy labels</button> <span id=count class=meta></span></div>
 <h1>Can raw music strings become Pieces and Arrangements without duplicates?</h1>
-<p class=meta>PROTOTYPE, throwaway. Model {esc(str(S['model']))}. Label each row, then press "Copy labels" and paste the result back to Claude.</p>
+<p class=meta>PROTOTYPE, throwaway. Model {esc(str(S['model']))}. Every row starts as right; flip only the wrong ones, then press "Copy labels" and paste the result back to Claude.</p>
 <h2>Numbers</h2><pre>{esc(json.dumps(S, indent=1))}
 review reasons: {esc(json.dumps(review_reasons))}</pre>
-<h2>1. Random entries (50): is the parse right?</h2>
+<h2>1. Random entries (20): is the parse right?</h2>
 <p class=meta>Right = every Piece is correctly identified (title, composer vs performer, Source, Style) and split correctly.</p>
 <table>{s1}</table>
-<h2>2. Merged Pieces (30): did unlike things get merged?</h2><table>{s2}</table>
-<h2>3. LLM "same Piece?" verdicts (15 yes, 15 no)</h2><table>{s3}</table>
-<h2>4. Missed duplicates (30 random Pieces vs their closest titles)</h2>
+<h2>2. Merged Pieces (10): did unlike things get merged?</h2><table>{s2}</table>
+<h2>3. Missed duplicates (10 random Pieces vs their closest titles)</h2>
 <p class=meta>"duplicate missed" if any Piece on the right is the same Piece as the left one.</p><table>{s4}</table>
 <script>
-const K='normaliser-labels-'+{json.dumps(str(S['model']))};
+const K='normaliser-labels-'+{json.dumps(d.name)};
 function all(){{const o={{}};document.querySelectorAll('input').forEach(i=>{{if(i.type==='radio'&&i.checked)o[i.name]=i.value;if(i.type!=='radio'&&i.value)o[i.name]=i.value}});return o}}
-function save(){{const o=all();document.getElementById('count').textContent=Object.keys(o).filter(k=>!k.includes(':')).length+' / 140 labelled';try{{localStorage.setItem(K,JSON.stringify(o))}}catch(e){{}}}}
+function save(){{const o=all();document.getElementById('count').textContent=Object.keys(o).filter(k=>!k.includes(':')).length+' labelled';try{{localStorage.setItem(K,JSON.stringify(o))}}catch(e){{}}}}
 function exportLabels(){{const t=JSON.stringify(all());navigator.clipboard.writeText(t).then(()=>alert('Copied '+t.length+' chars'),()=>prompt('Copy this:',t))}}
 try{{const o=JSON.parse(localStorage.getItem(K)||'{{}}');for(const[k,v]of Object.entries(o)){{const r=document.querySelector(`input[name="${{k}}"][value="${{v}}"]`);if(r)r.checked=true;else{{const n=document.querySelector(`input[name="${{k}}"]:not([type=radio])`);if(n)n.value=v}}}}}}catch(e){{}}
 document.addEventListener('input',save);save();
