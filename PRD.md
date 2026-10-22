@@ -61,7 +61,7 @@ ISU results are the **only** data source that creates records ([ADR 0001](docs/a
 | Music from visitors | Music Submissions (R3) | |
 | Videos from visitors | Video Submissions (R2) | |
 
-A Wikipedia row for a Season and Segment type with no ISU result may create that **Program** for an existing Skater or Team (its key is deterministic, so it can't duplicate); it never creates a Skater, Team or Performance. Such Programs show under the Season on the Skater page.
+A Wikipedia row for a Season and Segment type with no ISU-derived Program creates nothing: it is logged as an Import problem.
 
 Not used: live ISU bios (season-correct for ~15% of entries), skatingscores.com (robots.txt bans bots), Fandom wiki (ToU bans scrapers), GoldenSkate and Anything GOEs (unlicensed). MusicBrainz and Wikidata are optional cross-references on Pieces, never their identity ([Can MusicBrainz or Wikidata anchor Piece and Source identity?][t5]).
 
@@ -85,7 +85,7 @@ One Import pulls every data source in one job ([How does an Import run end to en
 - **Fetch phase** (no transaction): validate `corrections.yaml` (invalid → `failed` before crawling); conditional GETs on **every** listed event's index and `SEGxxx` pages (~6k pages; past results do change); Wikidata crosswalk and labels; Wikipedia articles re-downloaded only when their revision changed; the ISU YouTube uploads playlists plus a refresh of cache rows older than 25 days. One request at a time, 1 req/s per host, User-Agent `iceskatesong-import/1.0 (<contact email>)`. Every body is cached gzipped on a volume with a `fetched_pages` row. A fetch that fails 3 times keeps the cached copy and logs a problem.
 - **Apply phase** (one Postgres transaction, holding the Import advisory lock): re-parse **all** cached pages, so a parser fix applies without a re-crawl. Order: ISU, names, music, videos, then the corrections file. A page that fails to parse leaves its Segment untouched. After a Segment parses cleanly, its Performances whose key wasn't seen are marked `gone` (hidden, never deleted, cleared if they reappear).
 - **Outcome**: `succeeded` with per-entity counts and a problem count, or `failed` (rolled back) only for systemic errors: invalid corrections file, database error, or more than ~20% of fetches failing.
-- **`import_problems`** rows (step, kind, URL or key, JSON detail) for: fetch failed, parse failed, Team member created, Wikipedia Skater with no crosswalk, music string with no alias match, official video with no Performance match, corrections line with an unknown key, vanished import key. Problems older than the last 10 Imports are pruned.
+- **`import_problems`** rows (step, kind, URL or key, JSON detail) for: fetch failed, parse failed, Team member created, Wikipedia Skater with no crosswalk, Wikipedia row with no Program, music string with no alias match, official video with no Performance match, corrections line with an unknown key, vanished import key. Problems older than the last 10 Imports are pruned.
 - **Parser variants**: 2004–05 events use a different results vendor (uppercase filenames, no `seasonXXYY/` folder). Team members are matched to Skaters by normalised name + nationality (ISU Team IDs don't link to Skaters); a miss creates a Skater and logs a problem.
 
 ### Official video matching
@@ -139,7 +139,7 @@ Postgres alone: `pg_trgm` + `unaccent` on a generated `search_key` column per se
 Layout A: one page per record, single column, works on mobile ([What do the public browse pages look like?][t19]).
 
 - **Home**: one search box with example chips. As-you-type dropdown grouped into Skaters, Music, and "In music text, not matched to a Piece". The search box is in the top bar on every page.
-- **Skater page** (and a **Team page** built the same way): Season tabs, newest first. Each Season lists Competition cards with one row per Segment: rank, score, music with grade badges, video marker. A Skater page also lists the Performances of their Teams. Programs with no result on record are listed under the cards.
+- **Skater page** (and a **Team page** built the same way): Season tabs, newest first. Each Season lists Competition cards with one row per Segment: rank, score, music with grade badges, video marker. A Skater page also lists the Performances of their Teams.
 - **Piece page**: title, composers, Source, Wikidata link, Skater and Program counts; one collapsible block per Skater (open when ≤4 Skaters) with their Programs (Season, Segment, grade, raw text) and each Program's Performances.
 - **Performance page**: breadcrumb to the Skater's Season; video first (beside the result and music on desktop, stacked on mobile); result card with the ISU result link; music card with grade badges, raw Wikipedia text and article link; "Same Program, other Competitions".
 - **Video slot**: a click-to-load placeholder served by us (YouTube logo, video title, one-line privacy notice; no `i.ytimg.com` thumbnail before the click). The click loads the `youtube-nocookie` player. Alternatives listed under the player, the untimed stream labelled "untimed, plays last". Geo-blocked videos are skipped, or the slot says "Not available in your country". No video: "No video yet".
