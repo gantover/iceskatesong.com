@@ -20,9 +20,10 @@ from pydantic import BaseModel
 HERE = Path(__file__).parent
 MODEL = sys.argv[sys.argv.index("--model") + 1] if "--model" in sys.argv else "claude-haiku-5-5"
 USE_LLM = "--no-llm" not in sys.argv
+AGGR = "--aggressive" in sys.argv  # LLM parses every entry; every near-miss pair goes to the LLM
 PRICE = {"claude-haiku-5-5": (0.10, 0.50), "claude-opus-5-5": (4.00, 20.00)}  # $/MTok in, out
 SPEND_CAP = 3.00  # dollars, per run
-OUT = HERE / "out" / (MODEL if USE_LLM else "no-llm")
+OUT = HERE / "out" / ((MODEL + ("-aggressive" if AGGR else "")) if USE_LLM else "no-llm")
 OUT.mkdir(parents=True, exist_ok=True)
 
 # ---------- rules ----------
@@ -250,6 +251,9 @@ Entries (JSON):
 STATS_F = OUT / "llm_stats.json"  # cumulative over runs, so cached re-runs still report the real cost
 STATS = json.loads(STATS_F.read_text()) if STATS_F.exists() else {}
 _client = None
+import threading
+from concurrent.futures import ThreadPoolExecutor
+_lock = threading.Lock()
 
 
 def ask(kind, prompt, schema):
@@ -259,12 +263,13 @@ def ask(kind, prompt, schema):
         for line in (HERE.parents[1] / ".env").read_text().splitlines():
             if line.startswith("ANTHROPIC_API_KEY="):
                 os.environ.setdefault("ANTHROPIC_API_KEY", line.split("=", 1)[1].strip().strip('"'))
-        _client = anthropic.Anthropic()
-    st = STATS.setdefault(kind, {"calls": 0, "input_tokens": 0, "output_tokens": 0, "items": 0})
+        _client = anthropic.Anthropic(max_retries=10)
     r = _client.messages.parse(model=MODEL, max_tokens=16000, output_config={"effort": "low"},
                                messages=[{"role": "user", "content": prompt}], output_format=schema)
-    st["calls"] += 1; st["input_tokens"] += r.usage.input_tokens; st["output_tokens"] += r.usage.output_tokens
-    STATS_F.write_text(json.dumps(STATS))
+    with _lock:
+        st = STATS.setdefault(kind, {"calls": 0, "input_tokens": 0, "output_tokens": 0, "items": 0})
+        st["calls"] += 1; st["input_tokens"] += r.usage.input_tokens; st["output_tokens"] += r.usage.output_tokens
+        STATS_F.write_text(json.dumps(STATS))
     return r.parsed_output
 
 
@@ -280,17 +285,21 @@ def llm_resolve(entries):
     cache_f = OUT / "llm_cache.json"
     cache = json.loads(cache_f.read_text()) if cache_f.exists() else {}
     todo = [e for e in entries if str(e["id"]) not in cache]
-    for i in range(0, len(todo), 25):
+    batches = [todo[i:i + 25] for i in range(0, len(todo), 25)]
+    def run(batch):
         if spent() > SPEND_CAP:
-            print("spend cap hit, leaving", len(todo) - i, "entries unresolved"); break
-        batch = todo[i:i + 25]
+            return batch, None
         payload = json.dumps([{"id": e["id"], "text": e["raw"]} for e in batch], ensure_ascii=False)
-        out = ask("parse", LLM_PROMPT + payload, LBatch)
-        STATS["parse"]["items"] += len(batch)
-        for le in out.entries:
-            cache[str(le.id)] = le.model_dump()
-        cache_f.write_text(json.dumps(cache, ensure_ascii=False, indent=0))
-        print(f"  parse batch {i // 25 + 1}/{-(-len(todo) // 25)}: ${spent():.4f}")
+        return batch, ask("parse", LLM_PROMPT + payload, LBatch)
+    with ThreadPoolExecutor(4) as ex:
+        for n, (batch, out) in enumerate(ex.map(run, batches), 1):
+            if out is None:
+                print("spend cap hit, batch skipped"); continue
+            STATS["parse"]["items"] += len(batch)
+            for le in out.entries:
+                cache[str(le.id)] = le.model_dump()
+            cache_f.write_text(json.dumps(cache, ensure_ascii=False, indent=0))
+            print(f"  parse batch {n}/{len(batches)}: ${spent():.4f}", flush=True)
     return cache
 
 
@@ -306,7 +315,9 @@ class LPairs(BaseModel):
 PAIR_PROMPT = """Figure-skating program music. Each pair shows two groups of raw credits (title | credited
 names | source film/ballet/etc.). Credited names may be composers OR performers. Decide whether both groups
 name the same musical Piece: the same work at the same grain (an aria/song/film cue, else the whole work).
-Different versions/covers/arrangements of one work ARE the same Piece. Same title by different composers is
+Different versions/covers/arrangements of one work ARE the same Piece. A whole work and one excerpt,
+movement, aria or number from it are DIFFERENT Pieces (Romeo and Juliet ballet vs Dance of the Knights;
+The Four Seasons vs Winter); two names for the same number are the same Piece. Same title by different composers is
 NOT (e.g. Romeo and Juliet by Prokofiev vs by Tchaikovsky). A film soundtrack named as a whole and the same film
 named as a whole are the same Piece. Pairs (JSON):
 """
@@ -317,16 +328,20 @@ def adjudicate(pairs):
     cache_f = OUT / "pair_cache.json"
     cache = json.loads(cache_f.read_text()) if cache_f.exists() else {}
     todo = [p for p in pairs if p["id"] not in cache]
-    for i in range(0, len(todo), 40):
+    batches = [todo[i:i + 40] for i in range(0, len(todo), 40)]
+    def run(batch):
         if spent() > SPEND_CAP:
-            print("spend cap hit, leaving", len(todo) - i, "pairs unjudged"); break
-        batch = todo[i:i + 40]
-        out = ask("pairs", PAIR_PROMPT + json.dumps(batch, ensure_ascii=False), LPairs)
-        STATS["pairs"]["items"] += len(batch)
-        for x in out.pairs:
-            cache[x.id] = x.same_piece
-        cache_f.write_text(json.dumps(cache, indent=0))
-        print(f"  pair batch {i // 40 + 1}/{-(-len(todo) // 40)}: ${spent():.4f}")
+            return batch, None
+        return batch, ask("pairs", PAIR_PROMPT + json.dumps(batch, ensure_ascii=False), LPairs)
+    with ThreadPoolExecutor(4) as ex:
+        for n, (batch, out) in enumerate(ex.map(run, batches), 1):
+            if out is None:
+                print("spend cap hit, batch skipped"); continue
+            STATS["pairs"]["items"] += len(batch)
+            for x in out.pairs:
+                cache[x.id] = x.same_piece
+            cache_f.write_text(json.dumps(cache, indent=0))
+            print(f"  pair batch {n}/{len(batches)}: ${spent():.4f}", flush=True)
     return cache
 
 
@@ -350,7 +365,8 @@ def cluster(pieces_in):
     by_qid, near = {}, []
     titles = []
     for p in pieces_in:
-        if p["qid"] and p["qid"] in by_qid:
+        # a title link often points at the play/film (Source), so a shared QID still needs the composer guard
+        if p["qid"] and p["qid"] in by_qid and compatible(p["csur"], by_qid[p["qid"]]["csur"]) is not False:
             pc = by_qid[p["qid"]]; pc["members"].append(p); p["piece"] = pc["id"]; p["how"] = "qid"
             pc["csur"] |= p["csur"]; continue
         best, how = None, None
@@ -364,7 +380,7 @@ def cluster(pieces_in):
                 if score >= 92 and comp is not False and src is not False:
                     if comp or src or (p["qid"] and p["qid"] == pc["qid"]):
                         best, how = pc, "fuzzy"
-                    elif score == 100:
+                    elif score == 100 and not AGGR:
                         best, how = pc, "weak (title only)"  # no composer/source either side
                     else:
                         near.append((p, pc, score, "title close, nothing else to compare"))
@@ -374,6 +390,8 @@ def cluster(pieces_in):
                     near.append((p, pc, score, "composer differs" if comp is False else "source differs"))
                 elif score >= 85 and comp:
                     near.append((p, pc, score, "title similar, composer shared"))
+                elif AGGR and score >= 80:
+                    near.append((p, pc, score, "title similar"))
         if best:
             best["members"].append(p); p["piece"] = best["id"]; p["how"] = how
             best["csur"] |= p["csur"]
@@ -402,7 +420,7 @@ def main():
     flagged = [e for e in entries if not e["parsed"] or e["parsed"]["flags"]]
     no_anchor = [e for e in entries if e["parsed"] and not e["parsed"]["flags"] and not e["parsed"]["composers"]
                  and not e["parsed"]["title_link"] and not e["parsed"]["source"]]
-    to_llm = flagged + no_anchor
+    to_llm = entries if AGGR else flagged + no_anchor
     llm = {}
     if USE_LLM:
         print(len(to_llm), "entries to the LLM tier")
@@ -416,10 +434,15 @@ def main():
         if e["id"] in llm_ids and str(e["id"]) in llm:
             le = llm[str(e["id"])]
             e["tier"] = "llm"; e["unsure"] = le["unsure"]
+            # keep the title wikilink's QID when the LLM agrees on a single Piece with that title
+            tl = p and p["title_link"]
+            lq = (qmap.get(tl[1].replace("_", " "), {}).get("qid")
+                  if tl and len(le["pieces"]) == 1 and fuzz.token_set_ratio(norm(tl[0]), norm(le["pieces"][0]["title"])) >= 85
+                  else None)
             for k, lp in enumerate(le["pieces"]):
                 occ.append({"entry": e["id"], "k": k, "title": lp["title"], "composers": lp["composers"],
                             "source": lp["source"], "performer": lp["performer"], "style": lp["style"],
-                            "qid": None, "source_qid": None})
+                            "qid": lq, "source_qid": None})
             continue
         e["tier"] = "rules-unresolved" if e["id"] in llm_ids else "rules"
         if not p:
@@ -455,10 +478,18 @@ def main():
         while parent[i] != i:
             parent[i] = parent[parent[i]]; i = parent[i]
         return i
-    for x in pairs:
+    comps = {pc["id"]: set(pc["csur"]) for pc in pieces}  # composer surnames per root
+    for x in sorted(pairs, key=lambda x: -x["score"]):  # most similar first
         x["same"] = verdict.get(x["id"])
         if x["same"]:
-            a, b = map(int, x["id"].split("-")); parent[find(b)] = find(a)
+            a, b = map(int, x["id"].split("-")); ra, rb = find(a), find(b)
+            if ra == rb:
+                continue
+            # chaining guard: never join two clusters whose known composers don't overlap,
+            # else "Overture" (no composer) links every Overture together
+            if comps[ra] and comps[rb] and compatible(comps[ra], comps[rb]) is False:
+                x["blocked"] = True; continue
+            parent[rb] = ra; comps[ra] |= comps.pop(rb)
     for o in occ:
         root = find(o["piece"])
         if root != o["piece"]:
@@ -497,7 +528,7 @@ def main():
     for r in rows:
         why = []
         if r["tier"] == "rules-unresolved": why.append("rules flagged, no LLM answer")
-        if r["unsure"]: why.append("LLM unsure")
+
         if any(p["how"] == "weak (title only)" for p in r["pieces"]): why.append("title-only merge")
         if not r["pieces"]: why.append("nothing parsed")
         if why: review.append({"id": r["id"], "why": why})
@@ -516,7 +547,9 @@ def main():
                "pieces": len(pieces), "arrangements": len(arr), "sources": len(src_ids),
                "piece_occurrences": len(occ), "merged_pieces": sum(1 for p in piece_out if len(p["variants"]) > 1),
                "review_needed": len(review), "review_per_100": round(100 * len(review) / n, 1),
-               "pairs_judged": len(pairs), "pairs_merged": sum(1 for x in pairs if x["same"]),
+               "pairs_judged": len(pairs), "pairs_said_same": sum(1 for x in pairs if x["same"]),
+               "pairs_blocked_by_composer_guard": sum(1 for x in pairs if x.get("blocked")),
+               "llm_unsure_rows": sum(1 for r in rows if r["unsure"]),
                "llm": {k: {**v, "dollars": round(dollars(v), 4)} for k, v in STATS.items()},
                "llm_dollars_total": round(spent(), 4),
                "llm_dollars_per_entry": round(spent() / n, 6),

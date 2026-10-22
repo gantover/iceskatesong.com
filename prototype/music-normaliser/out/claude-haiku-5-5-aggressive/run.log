@@ -1,0 +1,291 @@
+7860 entries (one per listed Piece line) from 6369 cells
+7860 entries to the LLM tier
+  parse batch 1/194: $0.1470
+  parse batch 2/194: $0.1470
+  parse batch 3/194: $0.1470
+  parse batch 4/194: $0.1470
+  parse batch 5/194: $0.1496
+  parse batch 6/194: $0.1520
+  parse batch 7/194: $0.1572
+  parse batch 8/194: $0.1572
+  parse batch 9/194: $0.1593
+  parse batch 10/194: $0.1619
+  parse batch 11/194: $0.1642
+  parse batch 12/194: $0.1669
+  parse batch 13/194: $0.1691
+  parse batch 14/194: $0.1718
+  parse batch 15/194: $0.1748
+  parse batch 16/194: $0.1772
+  parse batch 17/194: $0.1793
+  parse batch 18/194: $0.1818
+  parse batch 19/194: $0.1839
+  parse batch 20/194: $0.1866
+  parse batch 21/194: $0.1889
+  parse batch 22/194: $0.1913
+  parse batch 23/194: $0.1935
+  parse batch 24/194: $0.1988
+  parse batch 25/194: $0.1988
+  parse batch 26/194: $0.2066
+  parse batch 27/194: $0.2066
+  parse batch 28/194: $0.2066
+  parse batch 29/194: $0.2093
+  parse batch 30/194: $0.2115
+  parse batch 31/194: $0.2140
+  parse batch 32/194: $0.2168
+  parse batch 33/194: $0.2193
+  parse batch 34/194: $0.2219
+  parse batch 35/194: $0.2246
+  parse batch 36/194: $0.2301
+  parse batch 37/194: $0.2301
+  parse batch 38/194: $0.2327
+  parse batch 39/194: $0.2353
+  parse batch 40/194: $0.2400
+  parse batch 41/194: $0.2400
+  parse batch 42/194: $0.2423
+  parse batch 43/194: $0.2447
+  parse batch 44/194: $0.2471
+  parse batch 45/194: $0.2494
+  parse batch 46/194: $0.2518
+  parse batch 47/194: $0.2593
+  parse batch 48/194: $0.2593
+  parse batch 49/194: $0.2593
+  parse batch 50/194: $0.2619
+  parse batch 51/194: $0.2645
+  parse batch 52/194: $0.2670
+  parse batch 53/194: $0.2700
+  parse batch 54/194: $0.2729
+  parse batch 55/194: $0.2758
+  parse batch 56/194: $0.2786
+  parse batch 57/194: $0.2812
+  parse batch 58/194: $0.2837
+  parse batch 59/194: $0.2860
+  parse batch 60/194: $0.2887
+  parse batch 61/194: $0.2913
+  parse batch 62/194: $0.2940
+  parse batch 63/194: $0.2968
+  parse batch 64/194: $0.2994
+  parse batch 65/194: $0.3018
+  parse batch 66/194: $0.3046
+  parse batch 67/194: $0.3099
+  parse batch 68/194: $0.3099
+  parse batch 69/194: $0.3125
+  parse batch 70/194: $0.3149
+  parse batch 71/194: $0.3193
+  parse batch 72/194: $0.3193
+  parse batch 73/194: $0.3219
+  parse batch 74/194: $0.3248
+  parse batch 75/194: $0.3271
+  parse batch 76/194: $0.3298
+  parse batch 77/194: $0.3323
+  parse batch 78/194: $0.3376
+  parse batch 79/194: $0.3376
+  parse batch 80/194: $0.3402
+  parse batch 81/194: $0.3432
+  parse batch 82/194: $0.3455
+  parse batch 83/194: $0.3481
+  parse batch 84/194: $0.3537
+  parse batch 85/194: $0.3537
+  parse batch 86/194: $0.3559
+  parse batch 87/194: $0.3583
+  parse batch 88/194: $0.3637
+  parse batch 89/194: $0.3637
+  parse batch 90/194: $0.3665
+  parse batch 91/194: $0.3687
+  parse batch 92/194: $0.3755
+  parse batch 93/194: $0.3755
+  parse batch 94/194: $0.3755
+  parse batch 95/194: $0.3781
+  parse batch 96/194: $0.3803
+  parse batch 97/194: $0.3826
+  parse batch 98/194: $0.3851
+  parse batch 99/194: $0.3876
+  parse batch 100/194: $0.3910
+  parse batch 101/194: $0.3940
+  parse batch 102/194: $0.3967
+  parse batch 103/194: $0.3993
+  parse batch 104/194: $0.4015
+  parse batch 105/194: $0.4039
+  parse batch 106/194: $0.4061
+  parse batch 107/194: $0.4081
+  parse batch 108/194: $0.4109
+  parse batch 109/194: $0.4134
+  parse batch 110/194: $0.4179
+  parse batch 111/194: $0.4179
+  parse batch 112/194: $0.4199
+  parse batch 113/194: $0.4284
+  parse batch 114/194: $0.4284
+  parse batch 115/194: $0.4284
+  parse batch 116/194: $0.4310
+  parse batch 117/194: $0.4336
+  parse batch 118/194: $0.4364
+  parse batch 119/194: $0.4393
+  parse batch 120/194: $0.4418
+  parse batch 121/194: $0.4446
+  parse batch 122/194: $0.4502
+  parse batch 123/194: $0.4502
+  parse batch 124/194: $0.4530
+  parse batch 125/194: $0.4551
+  parse batch 126/194: $0.4576
+  parse batch 127/194: $0.4630
+  parse batch 128/194: $0.4630
+  parse batch 129/194: $0.4653
+  parse batch 130/194: $0.4676
+  parse batch 131/194: $0.4700
+  parse batch 132/194: $0.4726
+  parse batch 133/194: $0.4749
+  parse batch 134/194: $0.4772
+  parse batch 135/194: $0.4796
+  parse batch 136/194: $0.4849
+  parse batch 137/194: $0.4849
+  parse batch 138/194: $0.4874
+  parse batch 139/194: $0.4904
+  parse batch 140/194: $0.4928
+  parse batch 141/194: $0.4954
+  parse batch 142/194: $0.4983
+  parse batch 143/194: $0.5007
+  parse batch 144/194: $0.5036
+  parse batch 145/194: $0.5063
+  parse batch 146/194: $0.5087
+  parse batch 147/194: $0.5108
+  parse batch 148/194: $0.5130
+  parse batch 149/194: $0.5158
+  parse batch 150/194: $0.5184
+  parse batch 151/194: $0.5206
+  parse batch 152/194: $0.5233
+  parse batch 153/194: $0.5258
+  parse batch 154/194: $0.5309
+  parse batch 155/194: $0.5309
+  parse batch 156/194: $0.5335
+  parse batch 157/194: $0.5360
+  parse batch 158/194: $0.5385
+  parse batch 159/194: $0.5416
+  parse batch 160/194: $0.5442
+  parse batch 161/194: $0.5469
+  parse batch 162/194: $0.5493
+  parse batch 163/194: $0.5522
+  parse batch 164/194: $0.5575
+  parse batch 165/194: $0.5575
+  parse batch 166/194: $0.5600
+  parse batch 167/194: $0.5629
+  parse batch 168/194: $0.5657
+  parse batch 169/194: $0.5688
+  parse batch 170/194: $0.5726
+  parse batch 171/194: $0.5780
+  parse batch 172/194: $0.5780
+  parse batch 173/194: $0.5810
+  parse batch 174/194: $0.5836
+  parse batch 175/194: $0.5862
+  parse batch 176/194: $0.5889
+  parse batch 177/194: $0.5911
+  parse batch 178/194: $0.5932
+  parse batch 179/194: $0.5985
+  parse batch 180/194: $0.5985
+  parse batch 181/194: $0.6014
+  parse batch 182/194: $0.6042
+  parse batch 183/194: $0.6067
+  parse batch 184/194: $0.6095
+  parse batch 185/194: $0.6142
+  parse batch 186/194: $0.6142
+  parse batch 187/194: $0.6166
+  parse batch 188/194: $0.6195
+  parse batch 189/194: $0.6248
+  parse batch 190/194: $0.6248
+  parse batch 191/194: $0.6272
+  parse batch 192/194: $0.6310
+  parse batch 193/194: $0.6340
+  parse batch 194/194: $0.6340
+  pair batch 1/57: $0.6367
+  pair batch 2/57: $0.6382
+  pair batch 3/57: $0.6382
+  pair batch 4/57: $0.6401
+  pair batch 5/57: $0.6422
+  pair batch 6/57: $0.6422
+  pair batch 7/57: $0.6434
+  pair batch 8/57: $0.6457
+  pair batch 9/57: $0.6457
+  pair batch 10/57: $0.6470
+  pair batch 11/57: $0.6481
+  pair batch 12/57: $0.6495
+  pair batch 13/57: $0.6509
+  pair batch 14/57: $0.6538
+  pair batch 15/57: $0.6538
+  pair batch 16/57: $0.6549
+  pair batch 17/57: $0.6562
+  pair batch 18/57: $0.6574
+  pair batch 19/57: $0.6590
+  pair batch 20/57: $0.6617
+  pair batch 21/57: $0.6617
+  pair batch 22/57: $0.6629
+  pair batch 23/57: $0.6671
+  pair batch 24/57: $0.6671
+  pair batch 25/57: $0.6671
+  pair batch 26/57: $0.6689
+  pair batch 27/57: $0.6721
+  pair batch 28/57: $0.6721
+  pair batch 29/57: $0.6737
+  pair batch 30/57: $0.6770
+  pair batch 31/57: $0.6770
+  pair batch 32/57: $0.6784
+  pair batch 33/57: $0.6800
+  pair batch 34/57: $0.6813
+  pair batch 35/57: $0.6827
+  pair batch 36/57: $0.6844
+  pair batch 37/57: $0.6859
+  pair batch 38/57: $0.6873
+  pair batch 39/57: $0.6888
+  pair batch 40/57: $0.6900
+  pair batch 41/57: $0.6917
+  pair batch 42/57: $0.6934
+  pair batch 43/57: $0.6966
+  pair batch 44/57: $0.6966
+  pair batch 45/57: $0.6978
+  pair batch 46/57: $0.6994
+  pair batch 47/57: $0.7025
+  pair batch 48/57: $0.7025
+  pair batch 49/57: $0.7041
+  pair batch 50/57: $0.7056
+  pair batch 51/57: $0.7082
+  pair batch 52/57: $0.7098
+  pair batch 53/57: $0.7098
+  pair batch 54/57: $0.7127
+  pair batch 55/57: $0.7127
+  pair batch 56/57: $0.7142
+  pair batch 57/57: $0.7154
+{
+ "model": "claude-haiku-5-5",
+ "entries": 7860,
+ "cells": 6369,
+ "tiers": {
+  "llm": 7859,
+  "rules-unresolved": 1
+ },
+ "pieces": 3843,
+ "arrangements": 5262,
+ "sources": 955,
+ "piece_occurrences": 8203,
+ "merged_pieces": 818,
+ "review_needed": 5093,
+ "review_per_100": 64.8,
+ "pairs_judged": 2272,
+ "pairs_merged": 1596,
+ "llm": {
+  "parse": {
+   "calls": 254,
+   "input_tokens": 533996,
+   "output_tokens": 1161228,
+   "items": 6183,
+   "dollars": 0.634
+  },
+  "pairs": {
+   "calls": 57,
+   "input_tokens": 179766,
+   "output_tokens": 126846,
+   "items": 2272,
+   "dollars": 0.0814
+  }
+ },
+ "llm_dollars_total": 0.7154,
+ "llm_dollars_per_entry": 9.1e-05,
+ "llm_share": 100.0
+}
+EXIT 0
