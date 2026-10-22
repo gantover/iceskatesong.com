@@ -32,7 +32,9 @@
 
 **Submission**: A contribution from a visitor: a YouTube URL plus optional hints. Either a **Video Submission** ("this video is this Performance") or a **Music Submission** ("this Program uses these Arrangements").
 
-**Flag**: A visitor's report that a Performance, video, or music is wrongly assigned.
+**Flag**: A visitor's report that a Performance, video, or music is wrongly assigned. It stays open until the Admin resolves or dismisses it.
+
+**Block**: The Admin barring an anonymous visitor from sending Submissions and Flags, and discarding their pending ones.
 
 **Review Queue**: Submissions not confident enough to publish automatically, plus all Music Submissions and Flags, awaiting the Admin.
 
