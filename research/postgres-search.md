@@ -2,7 +2,7 @@
 
 Research for issue #20. Sources were fetched on **2026-10-22**. Hosting constraints come from #11: Rock 5 ITX (ARM64), one `compose.yml`, Postgres from day one with `pg_trgm` and `unaccent`.
 
-The tests ran in the official `postgres:18` (Debian, 18.6) and `postgres:18-alpine` (musl, 18.6) images, against synthetic data: about 50k person names (Latin with diacritics, plus Cyrillic and ~1,050 Japanese rows) and 30k Pieces carrying ~1.75 KB of English text each. **The timings come from a fast x86 desktop (Ryzen AI Max+ 395), not the RK3588.** Expect the Rock 5 to be several times slower per query. Re-time on the box once it is set up. The test script is [`postgres-search.sql`](postgres-search.sql).
+The full test script ran in both official images, `postgres:18` (Debian, 18.6) and `postgres:18-alpine` (musl, 18.6), with matching results and timings within ~10%. It used synthetic data: about 50k person names (Latin with diacritics, plus Cyrillic and ~1,050 Japanese rows) and 30k Pieces carrying ~1.75 KB of English text each. **The timings come from a fast x86 desktop (Ryzen AI Max+ 395), not the RK3588.** Expect the Rock 5 to be several times slower per query. Re-time on the box once it is set up. The test script is [`postgres-search.sql`](postgres-search.sql).
 
 ## Answer
 
@@ -20,7 +20,7 @@ Cross-script matching is a **data problem, not an engine problem.** Matching "Ha
 | Diacritics (Kévin, Ribič, Søren, Weiß, Łukasz, Ё) | `unaccent` in a generated column | `kevin aym` → Kévin Aymoz. `Ёлкин` → `Елкин` |
 | Typos | `word_similarity` / `<%` (threshold 0.6) | `plushchenko` → Evgeni Plushenko (0.69); `cizeronn` → Cizeron (0.78); `hanyu yuzru` → Yuzuru Hanyu (0.67); `плющенка` → Плющенко (0.78). **0.16 ms** |
 | As-you-type (partial words) | `LIKE '%…%'` on the trigram index, ranked by `word_similarity` | 3 letters `'%kar%'` (782 hits, top 10): **2.5 ms**. 2 letters `'%ka%'` (12k hits, seq scan): **18–26 ms** |
-| Japanese names (no word boundaries) | the same trigram index; trigrams work on characters, not words | `'%羽生結%'`: **1.1 ms**. `'宇野%'`: **0.8 ms**. 1–2 kanji `'%羽生%'`: **3.5–4.8 ms** (full scan, see below) |
+| Japanese names (no word boundaries) | the same trigram index; trigrams work on characters, not words | `'%羽生結%'`: **1.1 ms**. `'宇野%'`: **0.8 ms**. 1–2 kanji `'%羽生%'`: **~2–5 ms** (full scan, see below) |
 | Russian names | the same trigram index | `'%плющ%'` → Евгений Плющенко |
 | Raw Wikipedia music text | built-in full-text search: `tsvector` generated column + GIN, `websearch_to_tsquery('english', …)`, `ts_rank` | rare terms: **0.1–0.5 ms**. Prefix `zimm:*`: **15 ms**. Common words matching 98% of rows, ranked: **25 ms** |
 | Admin record pickers (R2) | the same queries | transactional: a record the Admin just created is searchable at once |
@@ -29,7 +29,7 @@ Cross-script matching is a **data problem, not an engine problem.** Matching "Ha
 
 - The default FTS parser cuts only at whitespace and punctuation. `to_tsvector('simple','羽生結弦のフリー')` returns **one token**, `'羽生結弦のフリー':1`. Full-text search is therefore the wrong tool for JA names. Use it only for the long English music text.
 - `pg_trgm` uses the same notion of "word" ("ignores non-word characters (non-alphanumerics)… Each word is considered to have two spaces prefixed and one space suffixed", [pg_trgm docs][trgm]). A JA name is therefore one long "word", but substring matching works on its character trigrams anyway, so `LIKE '%生結弦%'` hits the index.
-- **The weak spot is a 1–2 character query** (two-kanji surnames like 羽生 or 宇野 are common). The docs say: "a pattern with no extractable trigrams will degenerate to a full-index scan" ([pg_trgm docs][trgm]). The test confirmed it: the index returned all 50,061 rows for a recheck, or the planner picked a seq scan, and both took 3.5–4.8 ms. That is fine at tens of thousands of rows, and only becomes a concern somewhere past millions.
+- **The weak spot is a 1–2 character query** (two-kanji surnames like 羽生 or 宇野 are common). The docs say: "a pattern with no extractable trigrams will degenerate to a full-index scan" ([pg_trgm docs][trgm]). The test confirmed it: the index returned all 50,061 rows for a recheck, or the planner picked a seq scan, and both took ~2–5 ms. That is fine at tens of thousands of rows, and only becomes a concern somewhere past millions.
 - Anchored prefixes (`'宇野%'`) do extract a trigram (the padded word start) and stay fast.
 - Two normalisations `unaccent` does not do. Both are one-liners if they are ever needed (tested, not built):
   - half-width to full-width kana: `normalize(s, NFKC)` turns `ﾊﾆｭｳ` into `ハニュウ` and `ＨＡＮＹＵ` into `HANYU`;
@@ -96,14 +96,19 @@ Searching one box across Pieces, Skaters, Artists and so on means a `UNION ALL` 
 
 | | PGroonga | pg_bigm | Meilisearch | Typesense |
 |---|---|---|---|---|
-| What it is | Postgres extension (Groonga engine) with N-gram / JA tokenising | Postgres extension: 2-gram GIN index, fixes the 1–2 char case | separate search server | separate search server |
-| ARM64 Docker image | **yes**: `groonga/pgroonga:4.1.0-debian-18` / `-alpine-18`, amd64 + arm64, updated 2026-10-09 ([Docker Hub][pgroonga-hub]) | **no image**. Source + Makefile only ([repo][bigm]), so it needs a custom Dockerfile build | **yes**: `getmeili/meilisearch:v1.55.0`, amd64 + arm64, released 2026-10-12 ([Docker Hub][meili-hub], [release][meili-rel]) | **yes**: `typesense/typesense:30.2` stable (2026-04-19), amd64 + arm64 ([Docker Hub][ts-hub], [release][ts-rel]) |
-| Japanese | yes | bigrams, good for short JA | lindera IPA dictionary segmentation ([languages][meili-lang]) | `locale: "ja"`: "Mixed kanji-kana text segmentation" ([locale][ts-locale]) |
-| Typos | yes | similarity only | built-in, edit distance, defaults above | built-in |
+| What it is | Postgres extension (Groonga engine): "fast full text search platform for all languages with zero ETL" ([PGroonga][pgroonga]) | Postgres extension: 2-gram GIN index. Its own comparison rates 1–2 character keywords "Slow" for pg_trgm and "Fast" for pg_bigm, `LIKE` only ([pg_bigm docs][bigm-doc]) | separate search server | separate search server |
+| ARM64 Docker image | **yes**: `groonga/pgroonga:4.1.0-debian-18` / `-alpine-18`, amd64 + arm64, updated 2026-10-09 ([Docker Hub][pgroonga-hub]) | **no image**. Build from source with PGXS plus `shared_preload_libraries = 'pg_bigm'` ([pg_bigm docs][bigm-doc]), so it needs a custom Dockerfile. Tested up to PG 19 | **yes**: `getmeili/meilisearch:v1.55.0`, amd64 + arm64, released 2026-10-12 ([Docker Hub][meili-hub], [release][meili-rel]) | **yes**: `typesense/typesense:30.2` stable (2026-04-19), amd64 + arm64 ([tag 30.2][ts-hub], [release][ts-rel]) |
+| Japanese | yes, "all languages"; the home page names Japanese and Chinese as what stock FTS lacks ([PGroonga][pgroonga]) | "Non-alphabetic languages: Supported" ([pg_bigm docs][bigm-doc]) | lindera IPA dictionary segmentation ([languages][meili-lang]) | `locale: "ja"`: "Mixed kanji-kana text segmentation" ([locale][ts-locale]) |
+| Typos | edit-distance fuzzy search via `pgroonga_condition(…, fuzzy_max_distance_ratio => 0.34)`, since 3.2.1 ([reference][pgroonga-fuzzy]) | similarity search, since 1.1 ([pg_bigm docs][bigm-doc]) | built-in, edit distance, defaults above | built-in (not checked in docs) |
+| Latency at our scale | not measured | not measured | not measured | not measured |
 | Transliteration (Hanyu ↔ 羽生) | no | no | no | no |
 | Setup cost | swap the `postgres` image. Stays one database, transactional | maintain a custom image | new service + volume + API key + **sync job** from Postgres + reindex on every Import and Admin edit | same as Meilisearch |
 | Consistency | same transaction | same transaction | async indexing: a record the Admin just created may be missing from the R2 picker for a moment | async |
 | Backups | covered by `pg_dump` | covered | separate, or rebuild from Postgres | separate, or rebuild |
+
+Latency doesn't decide between the options: plain Postgres already answers in under 30 ms in its worst case at our scale, so any of these could at most save a few milliseconds.
+
+pg_bigm's table marks pg_trgm "Not supported (*1)" for non-alphabetic languages. That footnote doesn't hold for a UTF-8 database: the locale test in section 1 shows pg_trgm indexing kanji and Cyrillic, and the JA queries above hit the index for 3+ characters. Only the 1–2 character case is really slow.
 
 What a dedicated engine buys that Postgres doesn't: tuned relevance out of the box (typo-count ranking, word proximity, attribute weights), facets, and highlighting without SQL. None of these is in the ticket. What it costs: a second source of truth, a sync path that every Admin correction must also go through (and the corrections must survive per ADR 0002), and one more service to back up and upgrade on the box.
 
@@ -124,7 +129,8 @@ What a dedicated engine buys that Postgres doesn't: tuned relevance out of the b
 
 - Timings on the actual RK3588. Re-run the appendix there. On the slow side, the 25 ms worst cases could become ~100 ms. That is acceptable for a search box, but the 3-character rule matters more there.
 - Ranking quality on real names and real Wikipedia text: the test data was synthetic (a 60-word vocabulary, which overstates "common word" matches).
-- PGroonga and pg_bigm were not run, only their packaging checked.
+- PGroonga, pg_bigm, Meilisearch and Typesense were not run. Only their docs and packaging were checked.
+- Typesense typo-tolerance docs were not fetched.
 
 ## Sources
 
@@ -134,11 +140,12 @@ What a dedicated engine buys that Postgres doesn't: tuned relevance out of the b
 - https://www.postgresql.org/docs/18/textsearch-controls.html (`websearch_to_tsquery`, `:*` prefix, `ts_rank`, `ts_headline`)
 - https://hub.docker.com/_/postgres (tags `18`, `18.6`, `18-alpine`: arm64/v8 present, updated 2026-10-21/22)
 - https://hub.docker.com/r/groonga/pgroonga/tags
-- https://github.com/pgbigm/pg_bigm
+- https://github.com/pgbigm/pg_bigm · https://github.com/pgbigm/pg_bigm/blob/master/docs/pg_bigm_en.md (pg_trgm comparison table, tested PG versions, install)
+- https://pgroonga.github.io/ · https://pgroonga.github.io/reference/functions/pgroonga-condition.html (fuzzy_max_distance_ratio)
 - https://hub.docker.com/r/getmeili/meilisearch/tags · https://github.com/meilisearch/meilisearch/releases/tag/v1.55.0
 - https://www.meilisearch.com/docs/learn/relevancy/typo_tolerance_settings
 - https://www.meilisearch.com/docs/learn/resources/language
-- https://hub.docker.com/r/typesense/typesense/tags · https://github.com/typesense/typesense/releases/tag/v30.2
+- https://hub.docker.com/v2/repositories/typesense/typesense/tags/30.2 (amd64 + arm64) · https://github.com/typesense/typesense/releases/tag/v30.2
 - https://typesense.org/docs/guide/locale.html
 
 [trgm]: https://www.postgresql.org/docs/18/pgtrgm.html
@@ -150,7 +157,10 @@ What a dedicated engine buys that Postgres doesn't: tuned relevance out of the b
 [meili-rel]: https://github.com/meilisearch/meilisearch/releases/tag/v1.55.0
 [meili-typo]: https://www.meilisearch.com/docs/learn/relevancy/typo_tolerance_settings
 [meili-lang]: https://www.meilisearch.com/docs/learn/resources/language
-[ts-hub]: https://hub.docker.com/r/typesense/typesense/tags
+[ts-hub]: https://hub.docker.com/v2/repositories/typesense/typesense/tags/30.2
+[pgroonga]: https://pgroonga.github.io/
+[pgroonga-fuzzy]: https://pgroonga.github.io/reference/functions/pgroonga-condition.html
+[bigm-doc]: https://github.com/pgbigm/pg_bigm/blob/master/docs/pg_bigm_en.md
 [ts-rel]: https://github.com/typesense/typesense/releases/tag/v30.2
 [ts-locale]: https://typesense.org/docs/guide/locale.html
 
