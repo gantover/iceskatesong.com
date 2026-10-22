@@ -6,7 +6,7 @@ Every record has our own ID plus one or more stable **keys** in a shared key tab
 
 | Entity | Key(s) | Notes |
 |---|---|---|
-| Competition | ISU event URL path (from the repo-kept event list), slug | Level (senior/junior); names + city aliases for video-title matching. |
+| Competition | ISU event URL path (from the repo-kept event list), slug | Level (senior/junior); names and city (city and dates read from the ISU event index page). Video titles are matched against these plus a code-kept alias list per event type (e.g. `wc` → "World Champs"), not a per-Competition alias table. |
 | Segment | (Competition, Discipline, level, Segment type, round) | Mirrors an ISU Category's segment page. A qualifying group is its own Segment. No Category entity. |
 | Season | plain value (start year) | Not a table. |
 | Skater | ISU ID (0..n), slug | Pairs/dance-only Skaters have no ISU ID. Names: display (ISU Latin) + JA/RU (Wikidata) + every name an Import matched on, kept as aliases. |
@@ -19,7 +19,7 @@ Every record has our own ID plus one or more stable **keys** in a shared key tab
 | Source | slug, Wikidata QID (0..1) | Film, musical, ballet, opera, album, franchise. |
 | Artist | slug, Wikidata QID (0..1) | Composer/songwriter of a Piece or performer of an Arrangement; multilingual names + aliases. |
 | YouTube video | YouTube ID | API cache only: title, blocked regions, embeddable, `refreshed_at` (≤ 30 days). |
-| Performance video | (YouTube ID, start seconds, Performance) | Origin `official`/`admin`/`submitted`, status `active`/`hidden`. One stream serves many Performances via start times; many videos per Performance. The page plays the first in that origin order not blocked in the viewer's `CF-IPCountry`. |
+| Performance video | (YouTube ID, start seconds, Performance) | Origin `official`/`admin`/`submitted`, status `active`/`hidden`. One stream serves many Performances via start times; many videos per Performance. A full-segment stream with no known start time is linked to every Performance of its Segment with empty start seconds; the Admin or a Submission (R2) adds the start time (stream descriptions carry none). The page plays the first video not blocked in the viewer's `CF-IPCountry`: Performance clips and timed streams first, untimed streams last, each in origin order. |
 | Submission | own ID | Kind video/music; target Performance (video) or Program (music), empty for R4 bare URLs; YouTube ID, hints/music text, status `pending`/`approved`/`rejected`, hashed IP, resolving audit change. |
 | Flag | own ID | Target Performance, performance video, or Program music; reason, status `open`/`resolved`/`dismissed`, hashed IP, resolving audit change. That change is the Admin's explicit Resolve or Dismiss, never the fix itself: fixing the data does not close the Flag. |
 | Blocked submitter | hashed IP | Set by the Admin's Block (an audited, revertable change). That one change also rejects the hash's pending Submissions and dismisses its open Flags; new ones from the hash are refused. |
@@ -32,7 +32,7 @@ The Review Queue is a query over pending Submissions and open Flags, not a table
 
 1. **Merge moves keys and aliases.** Merging two Skaters (or Teams, Pieces, …) moves the loser's keys (ISU IDs, slug) and aliases to the survivor. The next Import resolves either ISU ID, an old URL, or the old misspelling to the survivor. When merged Skaters or Teams both have a Program with the same key, those Programs are merged in the same change (Performances and music claims move to the survivor's Program).
 2. **Links are set on insert only.** An Import finds a Performance by its import key and refreshes rank, scores and printed name. It never touches the Skater/Team or Program link afterwards, so reassignments and Program splits stick.
-3. **Human facts are their own rows.** Music claims and names are one row per claim, tagged with origin. Precedence: Admin > corrections file > approved Music Submission > Wikipedia > ISU. An Import rewrites only rows of its own origin.
+3. **Human facts are their own rows.** Music claims and names are one row per claim, tagged with origin; a Wikipedia row also keeps its article and revision, which the page links for CC BY-SA attribution. Precedence: Admin > corrections file > approved Music Submission > Wikipedia > ISU. An Import rewrites only rows of its own origin.
 4. **Statuses are never reset.** An Import upserts a performance video and leaves its status alone, so a hidden link stays hidden. The Performance `gone` flag is the exception: it is the Import's own field, not a human status.
 
 ## Corrections file (R1)
