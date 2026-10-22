@@ -32,7 +32,7 @@
 
 **Submission**: A contribution from a visitor. Either a **Video Submission** (a YouTube URL plus optional hints: "this video is this Performance") or a **Music Submission** (free music text plus an optional link: "this Program uses this music"). An approved Music Submission becomes the Program's music unless the Admin has set it directly.
 
-**Match grade**: How well a Program's link to a Piece is backed: **identified** (the Piece is anchored to an external ID), **credited** (a composer or Source is known), or **title only**. It reflects the data behind the link, not who made it: a Piece the Admin picked still shows title only until it gains an Artist, Source or external ID.
+**Match grade**: How well the evidence behind a Program's link to a Piece backs it: **identified** (an external ID), **credited** (a composer or Source), or **title only**. For imported music the evidence is that entry's own text, so a bare title stays title only even on a well-known Piece. For music the Admin picked, the evidence is the Piece itself, so a confirmed pick still shows title only until the Piece gains an Artist, Source or external ID.
 
 **Flag**: A visitor's report that a Performance, video, or music is wrongly assigned. It stays open until the Admin resolves or dismisses it.
 
