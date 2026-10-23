@@ -27,6 +27,7 @@ class Event:
 @dataclass
 class Entry:
     rank: int | None
+    rank_label: str | None  # printed instead of a rank: WD, WDR, DSQ
     name: str
     nation: str
     isu_id: str | None
@@ -150,7 +151,8 @@ def _entry(columns: list[str | None], cells: list[str]) -> Entry:
     if not (start_number.isdigit() or start_number == ""):
         raise ParseError(f"bad start number: {start_number!r}")
     return Entry(
-        rank=int(rank) if rank.isdigit() else None,  # WD, DSQ: no rank
+        rank=int(rank) if rank.isdigit() else None,
+        rank_label=None if rank.isdigit() else rank or None,
         name=_text(row["name"]),
         nation=_text(row["nation"]),
         isu_id=isu_id and isu_id.group(1),

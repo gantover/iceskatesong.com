@@ -88,6 +88,7 @@ export interface Performances {
   pcs: Numeric | null;
   program_id: Int8;
   rank: number | null;
+  rank_label: string | null;
   segment_id: Int8;
   skater_id: Int8 | null;
   start_number: number | null;

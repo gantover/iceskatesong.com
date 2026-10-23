@@ -105,13 +105,13 @@ class Apply:
             self.problem("vanished import key", key, segment=url)
 
     def performance(self, segment_id: int, season_: int, segment: isu.Segment, entry: isu.Entry) -> None:
-        fields = [entry.rank, entry.tss, entry.tes, entry.pcs, entry.deductions, entry.start_number, entry.name, entry.nation]
+        fields = [entry.rank, entry.rank_label, entry.tss, entry.tes, entry.pcs, entry.deductions, entry.start_number, entry.name, entry.nation]
         performance_id = self.one("select id from performances where segment_id = %s and entry_key = %s", [segment_id, entry.key])
         if performance_id:
-            if self.one("""update performances set rank = %s, tss = %s, tes = %s, pcs = %s, deductions = %s,
+            if self.one("""update performances set rank = %s, rank_label = %s, tss = %s, tes = %s, pcs = %s, deductions = %s,
                              start_number = %s, name = %s, nation = %s, gone = false
-                           where id = %s and (rank, tss, tes, pcs, deductions, start_number, name, nation, gone)
-                             is distinct from (%s, %s, %s, %s, %s, %s, %s, %s, false)
+                           where id = %s and (rank, rank_label, tss, tes, pcs, deductions, start_number, name, nation, gone)
+                             is distinct from (%s, %s, %s, %s, %s, %s, %s, %s, %s, false)
                            returning id""", [*fields, performance_id, *fields]):
                 self.counts["performance"]["updated"] += 1
             return
@@ -129,8 +129,8 @@ class Apply:
             self.counts["program"]["created"] += 1
         self.conn.execute(
             """insert into performances (segment_id, entry_key, skater_id, team_id, program_id,
-                 rank, tss, tes, pcs, deductions, start_number, name, nation)
-               values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                 rank, rank_label, tss, tes, pcs, deductions, start_number, name, nation)
+               values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
             [segment_id, entry.key, skater_id, team_id, program_id, *fields],
         )
         self.counts["performance"]["created"] += 1

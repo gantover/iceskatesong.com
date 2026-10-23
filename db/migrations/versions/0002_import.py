@@ -120,6 +120,8 @@ def upgrade() -> None:
           team_id bigint references teams,
           program_id bigint not null references programs,
           rank int,
+          -- Printed instead of a rank: WD, WDR, DSQ (no scores then)
+          rank_label text,
           tss numeric(6, 2),
           tes numeric(6, 2),
           pcs numeric(6, 2),

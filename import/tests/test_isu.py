@@ -34,7 +34,7 @@ def test_segment_page_gives_its_segment_and_entries_as_printed():
     assert (seg.discipline, seg.level, seg.segment_type, seg.round) == ("ice dance", "senior", "rhythm dance", "")
     assert len(seg.entries) == 6
     assert seg.entries[0] == isu.Entry(
-        rank=1, name="Madison CHOCK / Evan BATES", nation="USA", isu_id="00013665",
+        rank=1, rank_label=None, name="Madison CHOCK / Evan BATES", nation="USA", isu_id="00013665",
         tss=Decimal("88.74"), tes=Decimal("50.93"), pcs=Decimal("37.81"), deductions=Decimal("0.00"), start_number=6,
     )
 
@@ -43,7 +43,7 @@ def test_older_segment_page_with_uppercase_tags_and_five_components():
     seg = isu.parse_segment(page("wc2008/SEG001.HTM"))
     assert (seg.discipline, seg.level, seg.segment_type) == ("men", "senior", "short program")
     assert seg.entries[5] == isu.Entry(
-        rank=6, name="Brian JOUBERT", nation="FRA", isu_id="00004708",
+        rank=6, rank_label=None, name="Brian JOUBERT", nation="FRA", isu_id="00004708",
         tss=Decimal("77.75"), tes=Decimal("41.14"), pcs=Decimal("38.61"), deductions=Decimal("2.00"), start_number=43,
     )
 
@@ -98,11 +98,12 @@ def test_caption_variants(path, segment):
     assert (seg.discipline, seg.level, seg.segment_type, seg.round) == segment
 
 
-def test_withdrawn_and_disqualified_entries_have_no_rank_or_scores():
+def test_withdrawn_and_disqualified_entries_keep_their_label_instead_of_a_rank_or_scores():
     withdrawn = next(e for e in isu.parse_segment(page("season2122/jgpaut2021/SEG003.htm")).entries if e.isu_id == "00107901")
-    assert (withdrawn.name, withdrawn.rank, withdrawn.tss, withdrawn.start_number) == ("Zara HUSEDZINOVIC", None, None, 20)
+    assert (withdrawn.name, withdrawn.rank, withdrawn.rank_label, withdrawn.tss, withdrawn.start_number) == (
+        "Zara HUSEDZINOVIC", None, "WD", None, 20)
     disqualified = next(e for e in isu.parse_segment(page("season2122/ec2022/SEG003.htm")).entries if e.isu_id == "00107871")
-    assert (disqualified.rank, disqualified.tss, disqualified.start_number) == (None, None, 35)
+    assert (disqualified.rank, disqualified.rank_label, disqualified.tss, disqualified.start_number) == (None, "DSQ", None, 35)
 
 
 def test_synchronized_skating_is_skipped():
