@@ -85,6 +85,8 @@ def test_dates_printed_with_two_digit_years():
 
 @pytest.mark.parametrize("path, segment", [
     ("owg2014/SEG009.HTM", ("men", "senior", "short program", "team")),  # "Team Men - Short Program"
+    ("season2122/owg2022/SEG009.htm", ("men", "senior", "short program", "team")),  # "Team Event - Men Single Skating - …"
+    ("season1920/wyog2020/SEG009.htm", ("men", "senior", "free skating", "team")),  # "Mixed NOC Team - Men Single Skating - …"
     ("ec2011/SEG003.HTM", ("ice dance", "senior", "free dance", "preliminary round")),
     ("gpf0809/SEG009.HTM", ("men", "senior", "short program", "")),  # "Senior Men"
     ("season1718/owg2018/SEG005.HTM", ("pairs", "senior", "short program", "")),  # "Pair Skating"

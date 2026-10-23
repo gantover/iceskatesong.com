@@ -13,7 +13,7 @@ from urllib.parse import urljoin, urlsplit
 import isu
 
 TEAM_DISCIPLINES = ("pairs", "ice dance")
-JUNIOR_EVENT_CODES = ("jgp", "wjc", "yog")
+JUNIOR_EVENT_CODES = ("jgp", "wjc", "yog", "wyog")  # Junior Grand Prix (and Final), Junior Worlds, Youth Olympics
 
 
 class Apply:
@@ -58,6 +58,8 @@ class Apply:
                     self.problem("parse failed", page_url, error=f"second page for Segment {key}")
                     continue
                 seen.add(key)
+                if event_level(url) == "junior":  # Youth Olympics captions don't say "Junior"
+                    segment.level = "junior"
                 segments.append((competition_id, season(event), page_url, segment))
         # Singles first, so Team members match the Skaters their singles entries created.
         for args in sorted(segments, key=lambda s: s[3].discipline in TEAM_DISCIPLINES):
@@ -65,9 +67,8 @@ class Apply:
         return dict(self.counts)
 
     def competition(self, url: str, event: isu.Event) -> int:
-        path = urlsplit(url).path.removeprefix("/results/").removesuffix("/index.htm")
-        code = path.rsplit("/", 1)[-1]
-        fields = [event.name, event.city, event.start, event.end, "junior" if code.startswith(JUNIOR_EVENT_CODES) else "senior"]
+        path = event_path(url)
+        fields = [event.name, event.city, event.start, event.end, event_level(url)]
         competition_id = self.one("select entity_id from keys where system = 'isu-event' and value = %s", [path])
         if competition_id:
             if self.one("""update competitions set name = %s, city = %s, start_date = %s, end_date = %s, level = %s
@@ -78,7 +79,7 @@ class Apply:
         competition_id = self.one("""insert into competitions (name, city, start_date, end_date, level)
                                      values (%s, %s, %s, %s, %s) returning id""", fields)
         self.key("isu-event", path, "competition", competition_id)
-        self.slug(code, "competition", competition_id)
+        self.slug(path.rsplit("/", 1)[-1], "competition", competition_id)
         self.counts["competition"]["created"] += 1
         return competition_id
 
@@ -196,6 +197,15 @@ class Apply:
             n += 1
             slug = f"{base}-{n}"
         self.key("slug", slug, entity, entity_id)
+
+
+def event_path(url: str) -> str:
+    """The Competition key: the event's path on the results host, e.g. season2526/gpf2025."""
+    return urlsplit(url).path.removeprefix("/results/").removesuffix("/index.htm")
+
+
+def event_level(url: str) -> str:
+    return "junior" if event_path(url).rsplit("/", 1)[-1].startswith(JUNIOR_EVENT_CODES) else "senior"
 
 
 def slugify(text: str) -> str:

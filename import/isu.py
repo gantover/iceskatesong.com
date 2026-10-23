@@ -110,8 +110,14 @@ def parse_index(page: str) -> Event:
 
 def _caption(caption: str) -> tuple[str, str, str, str]:
     """"<category> - <segment>", e.g. "Junior Ladies - Free Skating", "Team Men - Short Program",
-    "Preliminary Round Ice Dance - Free Dance", "Men Single Skating - Short Program", "Men - Qualifying Group A"."""
-    category, _, segment = caption.lower().partition(" - ")
+    "Preliminary Round Ice Dance - Free Dance", "Men Single Skating - Short Program", "Men - Qualifying Group A",
+    and the Olympic team events "Team Event - Men Single Skating - Short Program" (2022 on) and
+    "Mixed NOC Team - Men Single Skating - Free Skating" (Youth Olympics 2020 on)."""
+    caption = caption.lower()
+    team_event = re.match(r"(team event|mixed noc team) - (?=.* - )", caption)
+    if team_event:
+        caption = "team " + caption[team_event.end():]
+    category, _, segment = caption.partition(" - ")
     if category.startswith("synchronized"):
         raise Skipped(caption)
     round_ = ""

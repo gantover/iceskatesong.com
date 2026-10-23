@@ -1,6 +1,7 @@
 import gzip
 import re
 
+import apply
 import fetch
 import main
 
@@ -137,3 +138,8 @@ def test_too_many_failed_fetches_fail_the_import_and_write_nothing(conn, site, t
     assert problems(conn, "fetch failed") == [f"{site.url}/results/nowhere/index.htm"]
     assert len(site.log) == 3
     assert conn.execute("select count(*) from competitions").fetchone() == (0,)
+
+
+def test_youth_olympics_and_junior_series_are_junior():
+    assert [apply.event_level(f"https://results.isu.org/results/{path}/index.htm") for path in
+            ("season1920/wyog2020", "yog2012", "season2526/jgptha2025", "season2526/gpf2025")] == ["junior", "junior", "junior", "senior"]
