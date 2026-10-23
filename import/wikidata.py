@@ -50,44 +50,51 @@ def run(conn, body: bytes | None, problems: list[dict]) -> dict:
     try:
         items = parse(body)
     except Exception as e:
-        problems.append({"step": "wikidata", "kind": "parse failed", "key": URL.split("?")[0], "detail": {"error": repr(e)}})
+        problems.append({"step": "wikidata", "kind": "parse failed", "key": URL.split("?")[0], "detail": {"error": str(e)}})
         return {}
-    return apply(conn, items)
+    return apply(conn, items, problems)
 
 
-def apply(conn, items: list[Item]) -> dict:
-    """Insert missing keys and aliases; remove only the `enwiki` keys and `wikidata` names this step no longer yields."""
+def apply(conn, items: list[Item], problems: list[dict]) -> dict:
+    """Add missing keys and aliases. Only `enwiki` keys and `wikidata` names are this step's own, so only they move or go.
+
+    A Wikidata QID key is never moved or removed here: the Admin may have fixed it.
+    """
     created = {"key": 0, "name": 0}
-    titles, names = [], []
+    titles, aliases = [], []
     for item in items:
-        found = resolve(conn, item)
-        if not found:
+        record = resolve(conn, item, problems)
+        if not record:
             continue
-        rows = [("wikidata", item.qid)] + ([("enwiki", item.title)] if item.title else [])
-        for system, value in rows:
+        created["key"] += bool(conn.execute(
+            """insert into keys (system, value, entity, entity_id) values ('wikidata', %s, %s, %s)
+               on conflict do nothing returning 1""", [item.qid, *record]).fetchone())
+        if item.title:
+            titles.append(item.title)
             created["key"] += bool(conn.execute(
-                """insert into keys (system, value, entity, entity_id) values (%s, %s, %s, %s)
-                   on conflict do nothing returning 1""", [system, value, *found]).fetchone())
-        titles += [item.title] if item.title else []
+                """insert into keys (system, value, entity, entity_id) values ('enwiki', %s, %s, %s)
+                   on conflict (system, value) do update set entity = excluded.entity, entity_id = excluded.entity_id
+                   where (keys.entity, keys.entity_id) is distinct from (excluded.entity, excluded.entity_id)
+                   returning 1""", [item.title, *record]).fetchone())
         for label in filter(None, (item.ja, item.ru)):
-            names.append((*found, label))
+            aliases.append((*record, label))
             created["name"] += bool(conn.execute(
                 """insert into names (entity, entity_id, name, origin) values (%s, %s, %s, 'wikidata')
-                   on conflict do nothing returning 1""", [*found, label]).fetchone())
+                   on conflict do nothing returning 1""", [*record, label]).fetchone())
     deleted = {
         # A renamed article leaves its old title behind.
         "key": conn.execute("delete from keys where system = 'enwiki' and value <> all(%s)", [titles]).rowcount,
         # A changed label leaves the old one behind.
         "name": conn.execute("""delete from names where origin = 'wikidata' and (entity, entity_id, name) not in
                                   (select * from unnest(%s::text[], %s::bigint[], %s::text[]))""",
-                             [list(column) for column in zip(*names)] or [[], [], []]).rowcount,
+                             [list(column) for column in zip(*aliases)] or [[], [], []]).rowcount,
     }
-    return {entity: {"created": created[entity], "deleted": deleted[entity]}
-            for entity in created if created[entity] or deleted[entity]}
+    return {table: {"created": created[table], "deleted": deleted[table]}
+            for table in created if created[table] or deleted[table]}
 
 
-def resolve(conn, item: Item) -> tuple[str, int] | None:
-    """The Skater this item is, or the Team when the item is the duo itself.
+def resolve(conn, item: Item, problems: list[dict]) -> tuple[str, int] | None:
+    """(entity, entity_id) of the Skater this item is, or of the Team when the item names both partners.
 
     Wikidata puts a pair's or couple's Team ID on each partner's own item, so a Team ID resolves to the member whose
     names best match the item's English label and article title; a tie (both partners named) is the Team.
@@ -97,9 +104,12 @@ def resolve(conn, item: Item) -> tuple[str, int] | None:
     skaters = {entity_id for entity, entity_id in hits if entity == "skater"}
     if skaters:
         return "skater", min(skaters)
+    teams = [entity_id for entity, entity_id in hits if entity == "team"]
+    if not teams:
+        return None  # matches nothing: ignored
     label = words(f"{item.en or ''} {item.title or ''}")
     members = set()
-    for team_id in (entity_id for entity, entity_id in hits if entity == "team"):
+    for team_id in teams:
         scores = {}
         for skater_id, name in conn.execute(
                 """select n.entity_id, n.name from teams t join names n on n.entity = 'skater'
@@ -112,7 +122,11 @@ def resolve(conn, item: Item) -> tuple[str, int] | None:
         if len(winners) == 2:
             return "team", team_id
         members.add(winners[0])
-    return ("skater", members.pop()) if len(members) == 1 else None
+    if len(members) == 1:
+        return "skater", members.pop()
+    problems.append({"step": "wikidata", "kind": "Wikidata item with no Team member match", "key": item.qid,
+                     "detail": {"label": item.en or item.title, "teams": teams, "members": sorted(members)}})
+    return None
 
 
 def words(text: str) -> set[str]:

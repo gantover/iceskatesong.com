@@ -60,12 +60,31 @@ def test_a_team_id_on_each_partners_item_attaches_to_that_partner(conn):
     assert keys(conn, chock_bates, "team") == []
 
 
-def test_an_item_for_the_duo_itself_attaches_to_the_team(conn):
+def test_an_item_naming_both_partners_attaches_to_the_team(conn):
     davis_white = team(conn, "00006260", skater(conn, "Meryl DAVIS", "USA"), skater(conn, "Charlie WHITE", "USA"))
 
     wikidata.run(conn, SPARQL, [])
 
     assert keys(conn, davis_white, "team") == [("enwiki", "Meryl Davis and Charlie White"), ("wikidata", "Q96592016")]
+
+
+def test_a_team_id_item_naming_neither_partner_is_a_problem(conn):
+    team(conn, "00013665", skater(conn, "Someone ELSE", "USA"), skater(conn, "Another PERSON", "USA"))
+    problems = []
+
+    wikidata.run(conn, SPARQL, problems)
+
+    assert sorted(p["key"] for p in problems) == ["Q2470854", "Q457792"]  # Bates, Chock
+    assert conn.execute("select count(*) from keys where system <> 'isu'").fetchone() == (0,)
+
+
+def test_an_article_title_follows_its_item_to_another_record(conn):
+    hanyu = skater(conn, "Yuzuru HANYU", "JPN", "00010967")
+    conn.execute("insert into keys (system, value, entity, entity_id) values ('enwiki', 'Yuzuru Hanyu', 'skater', %s)", [hanyu + 1])
+
+    wikidata.run(conn, SPARQL, [])
+
+    assert keys(conn, hanyu) == [("enwiki", "Yuzuru Hanyu"), ("wikidata", "Q597023")]
 
 
 def test_a_changed_label_or_article_title_replaces_the_old_one(conn):
