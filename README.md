@@ -38,6 +38,8 @@ pnpm test                     # needs the Compose postgres up; makes and drops a
 cd import && uv run pytest     # also needs the Compose postgres up
 ```
 
+In a git worktree (no `.env`), pytest falls back to `.env.example`'s `DATABASE_URL`; `pnpm test` needs it in the environment: `DATABASE_URL=postgres://iceskatesong:iceskatesong@localhost:5432/iceskatesong pnpm test`.
+
 The Admin panel is `/admin`: "Import now", the Import status and its problems. `IMPORT_CONTACT_EMAIL` must be set in `.env` for an Import to run. Every `/admin` request needs a Cloudflare Access JWT (`CF_ACCESS_TEAM_DOMAIN` and `CF_ACCESS_AUD` in `.env`), so the Compose `web` answers 403 on a dev machine. Locally, run `ADMIN_DEV_BYPASS=true pnpm dev` in `web/` and open `http://localhost:5173/admin`, or start an Import by hand:
 
 ```sh

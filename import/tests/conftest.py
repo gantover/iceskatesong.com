@@ -19,10 +19,12 @@ PAGES = pathlib.Path(__file__).parent / "pages"
 def base_url() -> str:
     if url := os.environ.get("DATABASE_URL"):
         return url
-    for line in (ROOT / ".env").read_text().splitlines() if (ROOT / ".env").exists() else []:
-        if line.startswith("DATABASE_URL="):
-            return line.split("=", 1)[1].strip()
-    raise RuntimeError("DATABASE_URL is not set: copy .env.example to .env")
+    # .env.example's dev default: a git worktree has no .env.
+    for env in (ROOT / ".env", ROOT / ".env.example"):
+        for line in env.read_text().splitlines() if env.exists() else []:
+            if line.startswith("DATABASE_URL="):
+                return line.split("=", 1)[1].strip()
+    raise RuntimeError("DATABASE_URL is not set")
 
 
 @pytest.fixture(scope="session")

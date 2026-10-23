@@ -23,7 +23,7 @@ Every record has our own ID plus one or more stable **keys** in a shared key tab
 | Submission | own ID | Kind video/music; target Performance (video) or Program (music), empty for R4 bare URLs; YouTube ID and hints (video), or music text and an optional link (music; recording links such as Spotify stay here and never become keys), status `pending`/`approved`/`rejected`, hashed IP, resolving audit change. |
 | Flag | own ID | Target Performance, performance video, or Program music; reason, status `open`/`resolved`/`dismissed`, hashed IP, resolving audit change. That change is the Admin's explicit Resolve or Dismiss, never the fix itself: fixing the data does not close the Flag. |
 | Blocked submitter | hashed IP | Set by the Admin's Block (an audited, revertable change). That one change also rejects the hash's pending Submissions and dismisses its open Flags; new ones from the hash are refused. |
-| Import | own ID | Job row (status pending/running/succeeded/failed, per-entity counts) plus `import_problems` rows (step, kind, URL or key, detail) for items that matched nothing or failed. |
+| Import | own ID | Job row (status pending/running/succeeded/failed, per-entity counts `{created, updated}`, plus `deleted` from a step that removes its own stale rows; the Admin page renders this shape) plus `import_problems` rows (step, kind, URL or key, detail) for items that matched nothing or failed. |
 | Audit change / audit row | own ID | One Admin action (who, when, label, note, `reverted_by`) with rows (table, primary key, before JSON, after JSON). |
 
 The Review Queue is a query over pending Submissions and open Flags, not a table.
