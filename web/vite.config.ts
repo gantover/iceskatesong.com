@@ -19,17 +19,8 @@ export default defineConfig({
 	],
 	test: {
 		expect: { requireAssertions: true },
-		projects: [
-			{
-				extends: './vite.config.ts',
-				test: {
-					name: 'server',
-					environment: 'node',
-					globalSetup: ['./vitest.global-setup.ts'],
-					include: ['src/**/*.{test,spec}.{js,ts}'],
-					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}']
-				}
-			}
-		]
+		environment: 'node',
+		globalSetup: ['./vitest.global-setup.ts'],
+		include: ['src/**/*.{test,spec}.{js,ts}']
 	}
 });

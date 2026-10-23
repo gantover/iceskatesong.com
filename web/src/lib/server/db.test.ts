@@ -1,6 +1,6 @@
 import { sql } from 'kysely';
 import { afterAll, expect, inject, test } from 'vitest';
-import { createDb, databaseStatus } from './db';
+import { createDb, databaseStatus } from './db.js';
 
 const db = createDb(inject('databaseUrl'));
 afterAll(() => db.destroy());
@@ -13,7 +13,7 @@ test('the database is not on the C locale', async () => {
 	const { rows } = await sql<{ datcollate: string }>`
 		select datcollate from pg_database where datname = current_database()
 	`.execute(db);
-	expect(rows[0].datcollate).not.toBe('C');
+	expect(rows[0].datcollate).toBe('en_US.utf8');
 });
 
 test('f_unaccent works in a generated column', async () => {

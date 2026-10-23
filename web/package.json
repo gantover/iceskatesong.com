@@ -9,8 +9,6 @@
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-		"test:unit": "vitest",
 		"test": "vitest --run",
 		"db:types": "kysely-codegen --dialect postgres --env-file ../.env --exclude-pattern alembic_version --out-file src/lib/server/db-types.ts"
 	},
