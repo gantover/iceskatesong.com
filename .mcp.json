@@ -1,0 +1,12 @@
+{
+	"mcpServers": {
+		"playwright": {
+			"command": "npx",
+			"args": ["-y", "@playwright/mcp@0.0.83", "--headless", "--browser", "chromium"]
+		},
+		"svelte": {
+			"type": "http",
+			"url": "https://mcp.svelte.dev/mcp"
+		}
+	}
+}
