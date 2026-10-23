@@ -12,7 +12,8 @@ export const variables = defineEnvVars({
 	},
 	CF_ACCESS_TEAM_DOMAIN: {
 		description: 'Cloudflare Access team domain, e.g. https://<team>.cloudflareaccess.com. Unset: /admin answers 403',
-		schema: (value) => value || undefined
+		// The origin is the JWT's `iss`: no trailing slash. A value that isn't a URL fails at startup.
+		schema: (value) => (value ? new URL(value).origin : undefined)
 	},
 	CF_ACCESS_AUD: {
 		description: "The Access application's Audience (AUD) tag. Unset: /admin answers 403",

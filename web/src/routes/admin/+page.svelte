@@ -44,7 +44,8 @@
 					<dd class="text-destructive">{run.error}</dd>
 				{/if}
 			</dl>
-			{#if Object.keys(run.counts as Counts).length}
+			{@const counts = Object.entries(run.counts as Counts)}
+			{#if counts.length}
 				<table class="text-sm">
 					<thead>
 						<tr class="text-muted-foreground text-left">
@@ -54,7 +55,7 @@
 						</tr>
 					</thead>
 					<tbody>
-						{#each Object.entries(run.counts as Counts) as [entity, count] (entity)}
+						{#each counts as [entity, count] (entity)}
 							<tr>
 								<td class="pr-6">{entity}</td>
 								<td class="pr-6 tabular-nums">{count.created}</td>

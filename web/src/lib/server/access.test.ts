@@ -8,10 +8,10 @@ const signer = await generateKeyPair('RS256');
 const stranger = await generateKeyPair('RS256');
 const keySet = createLocalJWKSet({ keys: [{ ...(await exportJWK(signer.publicKey)), kid: 'k1', alg: 'RS256' }] });
 
-const token = (key = signer.privateKey, aud = audience) =>
+const token = (key = signer.privateKey, aud = audience, iss = issuer) =>
 	new SignJWT({ email: 'owner@example.com' })
 		.setProtectedHeader({ alg: 'RS256', kid: 'k1' })
-		.setIssuer(issuer)
+		.setIssuer(iss)
 		.setAudience(aud)
 		.setIssuedAt()
 		.setExpirationTime('5m')
@@ -19,12 +19,12 @@ const token = (key = signer.privateKey, aud = audience) =>
 
 const guard = accessGuard({ keySet, issuer, audience });
 
-async function status(path: string, jwt?: string, routeId: string | null = null) {
+async function status(path: string, jwt?: string, routeId: string | null = null, check = guard) {
 	const request = new Request(`http://localhost${path}`, {
 		headers: jwt ? { 'cf-access-jwt-assertion': jwt } : {}
 	});
 	const event = { request, url: new URL(request.url), route: { id: routeId } } as never;
-	const response = await guard({ event, resolve: async () => new Response('ok') });
+	const response = await check({ event, resolve: async () => new Response('ok') });
 	return response.status;
 }
 
@@ -34,6 +34,10 @@ test('a valid Access JWT reaches /admin', async () => {
 
 test('a JWT for another application gets 403', async () => {
 	expect(await status('/admin', await token(signer.privateKey, 'other-aud'))).toBe(403);
+});
+
+test('a JWT from another Access team gets 403', async () => {
+	expect(await status('/admin', await token(signer.privateKey, audience, 'https://other.cloudflareaccess.com'))).toBe(403);
 });
 
 test('a JWT signed by another key gets 403', async () => {
@@ -52,9 +56,7 @@ test('an encoded path that routes to /admin gets 403', async () => {
 
 test('without Access configured, /admin fails closed', async () => {
 	const unset = accessGuard({ keySet, issuer: undefined, audience: undefined });
-	const request = new Request('http://localhost/admin', { headers: { 'cf-access-jwt-assertion': await token() } });
-	const event = { request, url: new URL(request.url), route: { id: '/admin' } } as never;
-	expect((await unset({ event, resolve: async () => new Response('ok') })).status).toBe(403);
+	expect(await status('/admin', await token(), '/admin', unset)).toBe(403);
 });
 
 test('public pages need no JWT', async () => {
