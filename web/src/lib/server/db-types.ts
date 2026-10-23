@@ -3,4 +3,141 @@
  * Please do not edit it manually.
  */
 
-export interface DB {}
+import type { ColumnType } from "kysely";
+
+export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
+  ? ColumnType<S, I | undefined, U>
+  : ColumnType<T, T | undefined, T>;
+
+export type Int8 = ColumnType<string, bigint | number | string, bigint | number | string>;
+
+export type Json = JsonValue;
+
+export type JsonArray = JsonValue[];
+
+export type JsonObject = {
+  [x: string]: JsonValue | undefined;
+};
+
+export type JsonPrimitive = boolean | number | string | null;
+
+export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
+
+export type Numeric = ColumnType<string, number | string, number | string>;
+
+export type Timestamp = ColumnType<Date, Date | string, Date | string>;
+
+export interface Competitions {
+  city: string;
+  end_date: Timestamp;
+  id: Generated<Int8>;
+  level: string;
+  name: string;
+  start_date: Timestamp;
+}
+
+export interface FetchedPages {
+  body_sha256: string;
+  etag: string | null;
+  fetched_at: Timestamp;
+  last_modified: string | null;
+  url: string;
+}
+
+export interface ImportProblems {
+  detail: Generated<Json>;
+  id: Generated<Int8>;
+  import_id: Int8;
+  key: string;
+  kind: string;
+  step: string;
+}
+
+export interface Imports {
+  counts: Generated<Json>;
+  created_at: Generated<Timestamp>;
+  error: string | null;
+  finished_at: Timestamp | null;
+  id: Generated<Int8>;
+  problem_count: Generated<number>;
+  started_at: Timestamp | null;
+  status: Generated<string>;
+}
+
+export interface Keys {
+  entity: string;
+  entity_id: Int8;
+  system: string;
+  value: string;
+}
+
+export interface Names {
+  entity: string;
+  entity_id: Int8;
+  name: string;
+  origin: string;
+}
+
+export interface Performances {
+  deductions: Numeric | null;
+  entry_key: string;
+  gone: Generated<boolean>;
+  id: Generated<Int8>;
+  name: string;
+  nation: string;
+  pcs: Numeric | null;
+  program_id: Int8;
+  rank: number | null;
+  segment_id: Int8;
+  skater_id: Int8 | null;
+  start_number: number | null;
+  team_id: Int8 | null;
+  tes: Numeric | null;
+  tss: Numeric | null;
+}
+
+export interface Programs {
+  id: Generated<Int8>;
+  season: number;
+  segment_type: string;
+  seq: Generated<number>;
+  skater_id: Int8 | null;
+  team_id: Int8 | null;
+}
+
+export interface Segments {
+  competition_id: Int8;
+  discipline: string;
+  id: Generated<Int8>;
+  level: string;
+  round: Generated<string>;
+  segment_type: string;
+  url: string;
+}
+
+export interface Skaters {
+  id: Generated<Int8>;
+  name: string;
+  nation: string;
+}
+
+export interface Teams {
+  id: Generated<Int8>;
+  name: string;
+  skater1_id: Int8;
+  skater2_id: Int8;
+}
+
+export interface DB {
+  competitions: Competitions;
+  fetched_pages: FetchedPages;
+  import_problems: ImportProblems;
+  imports: Imports;
+  keys: Keys;
+  names: Names;
+  performances: Performances;
+  programs: Programs;
+  segments: Segments;
+  skaters: Skaters;
+  teams: Teams;
+}

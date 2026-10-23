@@ -1,5 +1,6 @@
 // Creates a throwaway database in the Compose Postgres, migrates it with Alembic,
-// and drops it after the run. Tests read its URL with inject('databaseUrl').
+// regenerates src/lib/server/db-types.ts from it, and drops it after the run.
+// Tests read its URL with inject('databaseUrl').
 import { execFileSync } from 'node:child_process';
 import pg from 'pg';
 import { loadEnv } from 'vite';
@@ -20,6 +21,8 @@ export default async function setup(project: TestProject) {
 		env: { ...process.env, DATABASE_URL: url.href },
 		stdio: 'inherit'
 	});
+	// Regenerate the Kysely types from the freshly migrated schema, so they never go stale after a migration.
+	execFileSync('pnpm', ['run', 'db:types', '--url', url.href], { stdio: 'inherit' });
 	project.provide('databaseUrl', url.href);
 
 	return async () => {

@@ -29,13 +29,19 @@ npx -y -p @playwright/mcp@0.0.83 playwright install chromium
 
 ```sh
 cp .env.example .env          # optional on a dev machine; required on the box
-docker compose up --build     # postgres → migrate → web on http://localhost:8080, import idles
+docker compose up --build     # postgres → migrate → web on http://localhost:8080, import polls for Imports
 
 cd web && pnpm install
-pnpm test                     # needs the Compose postgres up; makes and drops a throwaway database
-pnpm db:types                 # regenerate Kysely types after a migration
+pnpm test                     # needs the Compose postgres up; makes and drops a throwaway database,
+                              # and regenerates src/lib/server/db-types.ts from it: commit it with the migration
 
-cd import && uv run pytest
+cd import && uv run pytest     # also needs the Compose postgres up
+```
+
+Start an Import by hand (until the Admin's "Import now" button exists). `IMPORT_CONTACT_EMAIL` must be set in `.env`:
+
+```sh
+docker compose exec postgres psql -U iceskatesong -c "insert into imports default values"
 ```
 
 Check the ARM64 build: `docker buildx build --platform linux/arm64 web` (same for `db` and `import`).
