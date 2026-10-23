@@ -42,8 +42,10 @@ class Apply:
             competition_id = self.competition(url, event)
             seen = set()
             for page in event.segment_pages:
-                page_url = urljoin(url, page)
-                body = read(page_url)
+                for page_url in page_urls(url, page):
+                    body = read(page_url)
+                    if body is not None:
+                        break
                 if body is None:
                     continue
                 try:
@@ -136,20 +138,23 @@ class Apply:
         self.counts["performance"]["created"] += 1
 
     def skater(self, isu_id: str | None, name: str, nation: str) -> int:
-        skater_id = (self.one("select entity_id from keys where system = 'isu' and value = %s and entity = 'skater'", [isu_id])
-                     if isu_id else self.match_skater(name, nation))
+        skater_id = isu_id and self.one(
+            "select entity_id from keys where system = 'isu' and value = %s and entity = 'skater'", [isu_id])
         if not skater_id:
-            skater_id = self.create_skater(name, nation)
+            # Also for a new ISU ID: the Skater may have been created from an entry printed without one (2004–05).
+            skater_id = self.match_skater(name, nation, without_isu_id=bool(isu_id)) or self.create_skater(name, nation)
             if isu_id:
                 self.key("isu", isu_id, "skater", skater_id)
         self.name("skater", skater_id, name)
         return skater_id
 
-    def match_skater(self, name: str, nation: str) -> int | None:
-        """A Skater with this normalised name (any alias) and nationality."""
+    def match_skater(self, name: str, nation: str, without_isu_id=False) -> int | None:
+        """A Skater with this normalised name (any alias) and nationality; `without_isu_id`: only one with no ISU ID."""
         return self.one("""select s.id from skaters s join names n on n.entity = 'skater' and n.entity_id = s.id
                            where s.nation = %s and lower(f_unaccent(n.name)) = lower(f_unaccent(%s))
-                           order by s.id limit 1""", [nation, name])
+                             and not (%s and exists (select from keys k where k.system = 'isu' and k.entity = 'skater'
+                                                     and k.entity_id = s.id))
+                           order by s.id limit 1""", [nation, name, without_isu_id])
 
     def create_skater(self, name: str, nation: str) -> int:
         skater_id = self.one("insert into skaters (name, nation) values (%s, %s) returning id", [name, nation])
@@ -170,15 +175,17 @@ class Apply:
                     self.problem("Team member created", name, team=entry.name, nation=entry.nation)
                 self.name("skater", skater_id, name)
                 members.append(skater_id)
-            if not entry.isu_id:
-                team_id = self.one("select id from teams where skater1_id = %s and skater2_id = %s", members)
+            # A new ISU Team ID only joins a Team created from entries printed without one (2004–05).
+            team_id = self.one("""select id from teams t where skater1_id = %s and skater2_id = %s
+                                    and not (%s and exists (select from keys k where k.system = 'isu' and k.entity = 'team'
+                                                            and k.entity_id = t.id))""", [*members, bool(entry.isu_id)])
             if not team_id:
                 team_id = self.one("insert into teams (name, skater1_id, skater2_id) values (%s, %s, %s) returning id",
                                    [entry.name, *members])
-                if entry.isu_id:
-                    self.key("isu", entry.isu_id, "team", team_id)
                 self.slug(entry.name, "team", team_id)
                 self.counts["team"]["created"] += 1
+            if entry.isu_id:
+                self.key("isu", entry.isu_id, "team", team_id)
         self.name("team", team_id, entry.name)
         return team_id
 
@@ -202,6 +209,12 @@ class Apply:
 def event_path(url: str) -> str:
     """The Competition key: the event's path on the results host, e.g. season2526/gpf2025."""
     return urlsplit(url).path.removeprefix("/results/").removesuffix("/index.htm")
+
+
+def page_urls(index_url: str, page: str) -> list[str]:
+    """A Segment page's URL as the index links it, then lowercased: some 2004–05 Junior Grand Prix events
+    link SEG001.HTM where the host serves only seg001.htm."""
+    return list(dict.fromkeys([urljoin(index_url, page), urljoin(index_url, page.lower())]))
 
 
 def event_level(url: str) -> str:

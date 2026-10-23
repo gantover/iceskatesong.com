@@ -13,7 +13,8 @@
 # owg/wtt<year>. Codes and folders vary between Seasons: copy the URL the host serves.
 #
 # 2004–05 events come from an older results vendor: uppercase result filenames and no
-# seasonYYZZ/ folder. A few Japan-hosted events from 2017–18 to 2023–24 use another vendor's
+# seasonYYZZ/ folder (some 2004–06 JGP indexes link SEG001.HTM where the host serves seg001.htm; the
+# Import tries both). A few Japan-hosted events from 2017–18 to 2023–24 use another vendor's
 # dataNNNN.htm pages instead of SEGnnn.htm (NHK Trophy 2017–2023, GP Final 2017, Worlds 2019
 # and 2023, World Team Trophy 2019–2023, JGP Osaka 2023).
 # Events with no results online are noted in a comment under their Season, never as URLs.

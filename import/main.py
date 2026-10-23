@@ -6,7 +6,6 @@ import signal
 import sys
 import time
 import traceback
-from urllib.parse import urljoin
 
 import psycopg
 from psycopg.types.json import Jsonb
@@ -60,7 +59,7 @@ def run(conn, import_id: int, events_file: pathlib.Path, cache_dir: pathlib.Path
             except Exception:
                 pages = []  # logged by the apply phase
             for page in pages:
-                fetcher.get(urljoin(url, page))
+                fetcher.get(*apply.page_urls(url, page))
         problems += [{"step": "fetch", "kind": "fetch failed", "key": url, "detail": {"error": error}}
                      for url, error in fetcher.failures]
         if len(fetcher.failures) > MAX_FAILED_FETCHES * fetcher.fetches:

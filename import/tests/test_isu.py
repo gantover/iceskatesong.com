@@ -106,6 +106,34 @@ def test_withdrawn_and_disqualified_entries_keep_their_label_instead_of_a_rank_o
     assert (disqualified.rank, disqualified.rank_label, disqualified.tss, disqualified.start_number) == (None, "DSQ", None, 35)
 
 
+def test_2004_index_prints_name_city_and_dates_as_headings():
+    event = isu.parse_index(page("jgpchn2004/index.htm"))
+    assert (event.name, event.city) == ("ISU Junior Grand Prix Harbin", "Harbin")
+    assert (event.start, event.end) == (dt.date(2004, 9, 16), dt.date(2004, 9, 19))
+    assert event.segment_pages == [f"SEG{n:03}.HTM" for n in range(1, 10)]  # as linked, though the host serves seg001.htm
+
+
+def test_2004_segment_page_prints_its_caption_as_a_heading_and_entries_without_isu_id():
+    seg = isu.parse_segment(page("jgpchn2004/seg001.htm"))
+    assert (seg.discipline, seg.segment_type, seg.round) == ("men", "short program", "")
+    assert seg.entries[4] == isu.Entry(
+        rank=5, rank_label=None, name="Jinlin GUAN", nation="CHN", isu_id=None,
+        tss=Decimal("51.06"), tes=Decimal("25.24"), pcs=Decimal("25.82"), deductions=Decimal("0.00"), start_number=8,
+    )
+    assert seg.entries[4].key == "Jinlin GUAN (CHN)"
+
+
+def test_surname_first_names_are_turned_given_name_first():
+    seg = isu.parse_segment(page("ec2005/SEG005.HTM"))  # "TOTMIANINA Tatiana - MARININ Maxim"
+    assert (seg.discipline, seg.segment_type) == ("pairs", "short program")
+    assert seg.entries[0].name == "Tatiana TOTMIANINA / Maxim MARININ"
+
+
+def test_qualifying_group_printed_in_the_category():
+    seg = isu.parse_segment(page("wjc2005/SEG001.HTM"))  # "Men Qualifying Group A - Free Skating"
+    assert (seg.discipline, seg.segment_type, seg.round) == ("men", "free skating", "qualifying group a")
+
+
 def test_synchronized_skating_is_skipped():
     with pytest.raises(isu.Skipped):
         isu.parse_segment(page("season1516/gpf1516/SEG017.HTM"))

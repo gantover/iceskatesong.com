@@ -140,6 +140,40 @@ def test_too_many_failed_fetches_fail_the_import_and_write_nothing(conn, site, t
     assert conn.execute("select count(*) from competitions").fetchone() == (0,)
 
 
+JGP_2004 = "results/jgpchn2004/index.htm"  # links SEG001.HTM, the host serves seg001.htm
+
+
+def skaters_printed_as(conn, name):
+    return conn.execute("select distinct skater_id from performances where name = %s", [name]).fetchall()
+
+
+def test_a_2004_event_imports_its_lowercase_pages_and_entries_without_isu_id(conn, site, tmp_path):
+    status, counts, _ = run_import(conn, site, tmp_path, events=(JGP_2004,))
+
+    assert status == "succeeded"
+    assert problems(conn, "fetch failed") == problems(conn, "parse failed") == []
+    assert counts["segment"]["created"] == 9
+    assert conn.execute("select name, city, start_date::text, level from competitions").fetchone() == (
+        "ISU Junior Grand Prix Harbin", "Harbin", "2004-09-16", "junior")
+    assert conn.execute("select url from segments order by id limit 1").fetchone() == (f"{site.url}/results/jgpchn2004/seg001.htm",)
+    # Entries without an ISU ID: one Skater (and one Team) per person across the event's Segments.
+    assert len(skaters_printed_as(conn, "Jinlin GUAN")) == 1
+    assert conn.execute("select count(distinct team_id) from performances where name = 'Elena EFAIEVA / Alexei MENSHIKOV'").fetchone() == (1,)
+
+
+def test_entries_without_isu_id_are_one_skater_or_team_across_events_and_join_their_isu_id_once_printed(conn, site, tmp_path):
+    # Yu-Na KIM and Tessa VIRTUE / Scott MOIR skate JGP Harbin and Budapest without an ISU ID, then the JGP Final with one.
+    status, _, _ = run_import(conn, site, tmp_path, events=(JGP_2004, "results/jgphun2004/index.htm", "results/jgpf0405/index.htm"))
+
+    assert status == "succeeded"
+    assert problems(conn, "parse failed") == []
+    assert conn.execute("select count(distinct segment_id) from performances where name = 'Yu-Na KIM'").fetchone() == (6,)
+    assert skaters_printed_as(conn, "Yu-Na KIM") == conn.execute(
+        "select entity_id from keys where system = 'isu' and value = '00007232'").fetchall()
+    assert conn.execute("select distinct team_id from performances where name = 'Tessa VIRTUE / Scott MOIR'").fetchall() == conn.execute(
+        "select entity_id from keys where system = 'isu' and value = '00006989'").fetchall()
+
+
 def test_youth_olympics_and_junior_series_are_junior():
     assert [apply.event_level(f"https://results.isu.org/results/{path}/index.htm") for path in
             ("season1920/wyog2020", "yog2012", "season2526/jgptha2025", "season2526/gpf2025")] == ["junior", "junior", "junior", "senior"]
