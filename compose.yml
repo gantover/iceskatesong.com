@@ -45,6 +45,8 @@ services:
     environment:
       <<: *database-url
       ORIGIN: ${ORIGIN:-http://localhost:8080}
+      CF_ACCESS_TEAM_DOMAIN: ${CF_ACCESS_TEAM_DOMAIN:-}
+      CF_ACCESS_AUD: ${CF_ACCESS_AUD:-}
     ports:
       - 127.0.0.1:${WEB_PORT:-8080}:3000
     depends_on:
