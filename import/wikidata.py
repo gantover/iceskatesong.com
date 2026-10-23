@@ -60,7 +60,7 @@ def apply(conn, items: list[Item], problems: list[dict]) -> dict:
 
     A Wikidata QID key is never moved or removed here: the Admin may have fixed it.
     """
-    created = {"key": 0, "name": 0}
+    created, updated = {"key": 0, "name": 0}, {"key": 0, "name": 0}
     titles, aliases = [], []
     for item in items:
         record = resolve(conn, item, problems)
@@ -71,11 +71,13 @@ def apply(conn, items: list[Item], problems: list[dict]) -> dict:
                on conflict do nothing returning 1""", [item.qid, *record]).fetchone())
         if item.title:
             titles.append(item.title)
-            created["key"] += bool(conn.execute(
+            row = conn.execute(
                 """insert into keys (system, value, entity, entity_id) values ('enwiki', %s, %s, %s)
                    on conflict (system, value) do update set entity = excluded.entity, entity_id = excluded.entity_id
                    where (keys.entity, keys.entity_id) is distinct from (excluded.entity, excluded.entity_id)
-                   returning 1""", [item.title, *record]).fetchone())
+                   returning xmax = 0""", [item.title, *record]).fetchone()  # xmax = 0: inserted, not moved
+            if row:
+                (created if row[0] else updated)["key"] += 1
         for label in filter(None, (item.ja, item.ru)):
             aliases.append((*record, label))
             created["name"] += bool(conn.execute(
@@ -89,8 +91,8 @@ def apply(conn, items: list[Item], problems: list[dict]) -> dict:
                                   (select * from unnest(%s::text[], %s::bigint[], %s::text[]))""",
                              [list(column) for column in zip(*aliases)] or [[], [], []]).rowcount,
     }
-    return {table: {"created": created[table], "deleted": deleted[table]}
-            for table in created if created[table] or deleted[table]}
+    return {table: {"created": created[table], "updated": updated[table], "deleted": deleted[table]}
+            for table in created if created[table] or updated[table] or deleted[table]}
 
 
 def resolve(conn, item: Item, problems: list[dict]) -> tuple[str, int] | None:
@@ -98,23 +100,30 @@ def resolve(conn, item: Item, problems: list[dict]) -> tuple[str, int] | None:
 
     Wikidata puts a pair's or couple's Team ID on each partner's own item, so a Team ID resolves to the member whose
     names best match the item's English label and article title; a tie (both partners named) is the Team.
+    Only the words one partner doesn't share with the other count, so a shared surname alone names no one.
     """
     hits = conn.execute("select entity, entity_id from keys where system = 'isu' and value = any(%s) order by entity_id",
                         [item.isu_ids]).fetchall()
-    skaters = {entity_id for entity, entity_id in hits if entity == "skater"}
+    skaters = sorted({entity_id for entity, entity_id in hits if entity == "skater"})
+    if len(skaters) > 1:  # one person, several Skaters: a duplicate for the Admin to merge
+        problems.append({"step": "wikidata", "kind": "Wikidata item matches several Skaters", "key": item.qid,
+                         "detail": {"label": item.en or item.title, "skaters": skaters}})
+        return None
     if skaters:
-        return "skater", min(skaters)
+        return "skater", skaters[0]
     teams = [entity_id for entity, entity_id in hits if entity == "team"]
     if not teams:
         return None  # matches nothing: ignored
     label = words(f"{item.en or ''} {item.title or ''}")
     members = set()
     for team_id in teams:
-        scores = {}
+        names: dict[int, set[str]] = {}
         for skater_id, name in conn.execute(
                 """select n.entity_id, n.name from teams t join names n on n.entity = 'skater'
                    and n.entity_id in (t.skater1_id, t.skater2_id) where t.id = %s""", [team_id]):
-            scores[skater_id] = max(scores.get(skater_id, 0), len(words(name) & label))
+            names.setdefault(skater_id, set()).update(words(name))
+        scores = {skater_id: len((own - set().union(*(w for s, w in names.items() if s != skater_id))) & label)
+                  for skater_id, own in names.items()}
         best = max(scores.values(), default=0)
         if not best:
             continue

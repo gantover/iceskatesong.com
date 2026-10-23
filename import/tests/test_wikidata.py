@@ -78,12 +78,36 @@ def test_a_team_id_item_naming_neither_partner_is_a_problem(conn):
     assert conn.execute("select count(*) from keys where system <> 'isu'").fetchone() == (0,)
 
 
+def test_partners_sharing_only_a_surname_with_the_item_are_a_problem_not_the_team(conn):
+    # Siblings or a married couple: "Madison Chock" names neither "Madisen" nor "Ted" (the given name is spelt differently).
+    chocks = team(conn, "00013665", skater(conn, "Madisen CHOCK", "USA"), skater(conn, "Ted CHOCK", "USA"))
+    problems = []
+
+    wikidata.run(conn, SPARQL, problems)
+
+    assert sorted(p["key"] for p in problems) == ["Q2470854", "Q457792"]  # Bates, Chock
+    assert keys(conn, chocks, "team") == []
+
+
+def test_an_item_matching_several_skaters_is_a_problem(conn):
+    # Bazarova's item carries two ISU IDs; here each one is a different Skater: a duplicate, not a choice to make.
+    skater(conn, "Vera BAZAROVA", "RUS", "00009807")
+    skater(conn, "Vera BAZAROVA", "RUS", "00054476")
+    problems = []
+
+    wikidata.run(conn, SPARQL, problems)
+
+    assert [(p["kind"], p["key"]) for p in problems] == [("Wikidata item matches several Skaters", "Q462429")]
+    assert conn.execute("select count(*) from keys where value in ('Q462429', 'Vera Bazarova')").fetchone() == (0,)
+
+
 def test_an_article_title_follows_its_item_to_another_record(conn):
     hanyu = skater(conn, "Yuzuru HANYU", "JPN", "00010967")
     conn.execute("insert into keys (system, value, entity, entity_id) values ('enwiki', 'Yuzuru Hanyu', 'skater', %s)", [hanyu + 1])
 
-    wikidata.run(conn, SPARQL, [])
+    counts = wikidata.run(conn, SPARQL, [])
 
+    assert counts["key"] == {"created": 1, "updated": 1, "deleted": 0}  # the QID; the moved title
     assert keys(conn, hanyu) == [("enwiki", "Yuzuru Hanyu"), ("wikidata", "Q597023")]
 
 
@@ -94,7 +118,7 @@ def test_a_changed_label_or_article_title_replaces_the_old_one(conn):
     changed = SPARQL.decode().replace("Юдзуру Ханю", "Юдзуру Ханю (фигурист)").replace('"Yuzuru Hanyu"', '"Yuzuru Hanyu (skater)"')
     counts = wikidata.run(conn, changed.encode(), [])
 
-    assert counts == {"key": {"created": 1, "deleted": 1}, "name": {"created": 1, "deleted": 1}}
+    assert counts == {"key": {"created": 1, "updated": 0, "deleted": 1}, "name": {"created": 1, "updated": 0, "deleted": 1}}
     assert keys(conn, hanyu) == [("enwiki", "Yuzuru Hanyu (skater)"), ("wikidata", "Q597023")]
     assert conn.execute("select name from names where origin = 'wikidata' order by name").fetchall() == [
         ("Юдзуру Ханю (фигурист)",), ("羽生結弦",)]

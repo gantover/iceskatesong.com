@@ -78,7 +78,7 @@ def test_wikidata_attaches_keys_and_names_once(conn, site, tmp_path):
 
     assert status == "succeeded"
     # Malinin by his Skater ID; Chock and Bates (created as Team members) through their Team ID.
-    assert {k: counts[k] for k in ("key", "name")} == {"key": {"created": 6, "deleted": 0}, "name": {"created": 6, "deleted": 0}}
+    assert {k: counts[k] for k in ("key", "name")} == {"key": {"created": 6, "updated": 0, "deleted": 0}, "name": {"created": 6, "updated": 0, "deleted": 0}}
     assert conn.execute("""select s.name from names n join skaters s on s.id = n.entity_id
                            where n.entity = 'skater' and n.name = 'イリア・マリニン'""").fetchall() == [("Ilia MALININ",)]
     before = snapshot(conn)

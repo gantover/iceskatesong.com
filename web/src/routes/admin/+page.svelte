@@ -7,7 +7,8 @@
 	let { data }: PageProps = $props();
 
 	type Import = NonNullable<typeof data.last>;
-	type Counts = Record<string, { created: number; updated: number }>;
+	// Only the Wikidata step deletes (its own stale keys and aliases).
+	type Counts = Record<string, { created: number; updated: number; deleted?: number }>;
 
 	// Follows a queued or running Import to its end. The import service picks up pending ones within 30 s.
 	$effect(() => {
@@ -51,7 +52,8 @@
 						<tr class="text-muted-foreground text-left">
 							<th class="pr-6 font-normal">Records</th>
 							<th class="pr-6 font-normal">Created</th>
-							<th class="font-normal">Updated</th>
+							<th class="pr-6 font-normal">Updated</th>
+							<th class="font-normal">Deleted</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -59,7 +61,8 @@
 							<tr>
 								<td class="pr-6">{entity}</td>
 								<td class="pr-6 tabular-nums">{count.created}</td>
-								<td class="tabular-nums">{count.updated}</td>
+								<td class="pr-6 tabular-nums">{count.updated}</td>
+								<td class="tabular-nums">{count.deleted ?? '–'}</td>
 							</tr>
 						{/each}
 					</tbody>
