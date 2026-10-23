@@ -1,0 +1,366 @@
+{
+ "head": {
+  "vars": [
+   "item",
+   "isu",
+   "en",
+   "title",
+   "ja",
+   "ru"
+  ]
+ },
+ "results": {
+  "bindings": [
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q68650"
+    },
+    "ru": {
+     "xml:lang": "ru",
+     "type": "literal",
+     "value": "Кати Винклер"
+    },
+    "ja": {
+     "xml:lang": "ja",
+     "type": "literal",
+     "value": "カティ・ウィンクラー"
+    },
+    "title": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Kati Winkler"
+    },
+    "en": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Kati Winkler"
+    },
+    "isu": {
+     "type": "literal",
+     "value": "00000290"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q462429"
+    },
+    "ru": {
+     "xml:lang": "ru",
+     "type": "literal",
+     "value": "Вера Евгеньевна Базарова"
+    },
+    "ja": {
+     "xml:lang": "ja",
+     "type": "literal",
+     "value": "ベラ・バザロワ"
+    },
+    "title": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Vera Bazarova"
+    },
+    "en": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Vera Bazarova"
+    },
+    "isu": {
+     "type": "literal",
+     "value": "00009807"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q462429"
+    },
+    "ru": {
+     "xml:lang": "ru",
+     "type": "literal",
+     "value": "Вера Евгеньевна Базарова"
+    },
+    "ja": {
+     "xml:lang": "ja",
+     "type": "literal",
+     "value": "ベラ・バザロワ"
+    },
+    "title": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Vera Bazarova"
+    },
+    "en": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Vera Bazarova"
+    },
+    "isu": {
+     "type": "literal",
+     "value": "00054476"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q76198"
+    },
+    "ru": {
+     "xml:lang": "ru",
+     "type": "literal",
+     "value": "Рене Лозе"
+    },
+    "ja": {
+     "xml:lang": "ja",
+     "type": "literal",
+     "value": "レネ・ローゼ"
+    },
+    "title": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "René Lohse"
+    },
+    "en": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "René Lohse"
+    },
+    "isu": {
+     "type": "literal",
+     "value": "00000290"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q992223"
+    },
+    "ru": {
+     "xml:lang": "ru",
+     "type": "literal",
+     "value": "Евгений Викторович Плющенко"
+    },
+    "ja": {
+     "xml:lang": "ja",
+     "type": "literal",
+     "value": "エフゲニー・ヴィクトロヴィチ・プルシェンコ"
+    },
+    "title": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Evgeni Plushenko"
+    },
+    "en": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Evgeni Plushenko"
+    },
+    "isu": {
+     "type": "literal",
+     "value": "00000124"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q597023"
+    },
+    "ru": {
+     "xml:lang": "ru",
+     "type": "literal",
+     "value": "Юдзуру Ханю"
+    },
+    "ja": {
+     "xml:lang": "ja",
+     "type": "literal",
+     "value": "羽生結弦"
+    },
+    "title": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Yuzuru Hanyu"
+    },
+    "en": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Yuzuru Hanyū"
+    },
+    "isu": {
+     "type": "literal",
+     "value": "00010967"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q250102"
+    },
+    "ru": {
+     "xml:lang": "ru",
+     "type": "literal",
+     "value": "Ларионов, Юрий Юрьевич"
+    },
+    "ja": {
+     "xml:lang": "ja",
+     "type": "literal",
+     "value": "ユーリ・ラリオノフ"
+    },
+    "title": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Yuri Larionov"
+    },
+    "en": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Yuri Larionov"
+    },
+    "isu": {
+     "type": "literal",
+     "value": "00009807"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q2470854"
+    },
+    "ru": {
+     "xml:lang": "ru",
+     "type": "literal",
+     "value": "Эван Бейтс"
+    },
+    "ja": {
+     "xml:lang": "ja",
+     "type": "literal",
+     "value": "エヴァン・ベイツ"
+    },
+    "title": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Evan Bates"
+    },
+    "en": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Evan Bates"
+    },
+    "isu": {
+     "type": "literal",
+     "value": "00013665"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q457792"
+    },
+    "ru": {
+     "xml:lang": "ru",
+     "type": "literal",
+     "value": "Мэдисон Чок"
+    },
+    "ja": {
+     "xml:lang": "ja",
+     "type": "literal",
+     "value": "メディソン・チョーク"
+    },
+    "title": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Madison Chock"
+    },
+    "en": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Madison Chock"
+    },
+    "isu": {
+     "type": "literal",
+     "value": "00013665"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q66707703"
+    },
+    "ru": {
+     "xml:lang": "ru",
+     "type": "literal",
+     "value": "Илья Малинин"
+    },
+    "title": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Ilia Malinin"
+    },
+    "en": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Ilia Malinin"
+    },
+    "isu": {
+     "type": "literal",
+     "value": "00108049"
+    },
+    "ja": {
+     "xml:lang": "ja",
+     "type": "literal",
+     "value": "イリア・マリニン"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q4755771"
+    },
+    "ru": {
+     "xml:lang": "ru",
+     "type": "literal",
+     "value": "Депутат, Андрей Дмитриевич"
+    },
+    "ja": {
+     "xml:lang": "ja",
+     "type": "literal",
+     "value": "アンドレイ・デプタト"
+    },
+    "title": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Andrei Deputat"
+    },
+    "en": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Andrei Deputat"
+    },
+    "isu": {
+     "type": "literal",
+     "value": "00054476"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q96592016"
+    },
+    "en": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Davis and White"
+    },
+    "isu": {
+     "type": "literal",
+     "value": "00006260"
+    },
+    "title": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Meryl Davis and Charlie White"
+    }
+   }
+  ]
+ }
+}

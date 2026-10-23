@@ -10,13 +10,14 @@ RHYTHM_DANCE = "results/season2526/gpf2025/SEG007.htm"
 DOMAIN_TABLES = ["competitions", "segments", "skaters", "teams", "programs", "performances", "keys", "names"]
 
 
-def run_import(conn, site, tmp_path, events=(GPF,)):
+def run_import(conn, site, tmp_path, events=(GPF,), wikidata=False):
     events_file = tmp_path / "events.txt"
     events_file.write_text("# test list\n\n" + "".join(f"{site.url}/{e}\n" for e in events))
     conn.execute("insert into imports default values")
     import_id = main.claim(conn)
     site.log.clear()
-    main.run(conn, import_id, events_file, tmp_path / "cache", "test@example.com", interval=0)
+    wikidata_url = f"{site.url}/wikidata/sparql?query=q&format=json" if wikidata else None
+    main.run(conn, import_id, events_file, tmp_path / "cache", "test@example.com", interval=0, wikidata_url=wikidata_url)
     return conn.execute("select status, counts, error from imports where id = %s", [import_id]).fetchone()
 
 
@@ -68,6 +69,22 @@ def test_a_second_run_sends_conditional_gets_and_changes_nothing(conn, site, tmp
     assert status == "succeeded"
     assert {status for method, path, status in site.log} == {"304"}
     assert len(site.log) == 17
+    assert counts == {}
+    assert snapshot(conn) == before
+
+
+def test_wikidata_attaches_keys_and_names_once(conn, site, tmp_path):
+    status, counts, _ = run_import(conn, site, tmp_path, wikidata=True)
+
+    assert status == "succeeded"
+    # Malinin by his Skater ID; Chock and Bates (created as Team members) through their Team ID.
+    assert {k: counts[k] for k in ("key", "name")} == {"key": {"created": 6, "deleted": 0}, "name": {"created": 6, "deleted": 0}}
+    assert conn.execute("""select s.name from names n join skaters s on s.id = n.entity_id
+                           where n.entity = 'skater' and n.name = 'イリア・マリニン'""").fetchall() == [("Ilia MALININ",)]
+    before = snapshot(conn)
+
+    _, counts, _ = run_import(conn, site, tmp_path, wikidata=True)
+
     assert counts == {}
     assert snapshot(conn) == before
 

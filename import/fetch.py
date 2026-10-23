@@ -35,7 +35,7 @@ class Fetcher:
         self.fetches = 0
         self.failures: list[tuple[str, str]] = []  # (url, last error)
 
-    def get(self, url: str, *alternatives: str) -> bytes | None:
+    def get(self, url: str, *alternatives: str, timeout=30) -> bytes | None:
         """When the host has no `url` (404), tries each of `alternatives` in turn instead."""
         self.fetches += 1
         path = cache_path(self.cache_dir, url)
@@ -51,7 +51,7 @@ class Fetcher:
         for _ in range(self.attempts):
             self._wait(url)
             try:
-                with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=30) as response:
+                with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=timeout) as response:
                     self._store(url, path, response.read(), response.headers)
                 break
             except urllib.error.HTTPError as e:
@@ -59,7 +59,7 @@ class Fetcher:
                     break
                 if e.code == 404 and alternatives:
                     self.fetches -= 1  # one page: count it once in the failure ratio
-                    return self.get(*alternatives)
+                    return self.get(*alternatives, timeout=timeout)
                 error = f"HTTP {e.code}"
             except (OSError, http.client.HTTPException) as e:  # URLError, timeouts, resets, truncated bodies
                 error = repr(e)
