@@ -1,0 +1,488 @@
+# ISU result events the Import reads: one event index URL per line.
+# Blank lines and lines starting with # are ignored.
+#
+# Scope: senior and junior ISU Championships, Grand Prix and Final, Junior Grand Prix
+# and Final, Olympics and Youth Olympics, World Team Trophy, and other ISU-run events
+# on results.isu.org (= isuresults.com). Challenger Series and other international
+# competitions are left out: most of their results live on the organisers' sites.
+#
+# Adding a Season: once an event's results are online, add its index URL under a new
+# "# YYYY–YY" header (~25 per Season). Since 2015–16 the host files events under
+# results/seasonYYZZ/<code>/, e.g. results/season2627/gpfra2026/index.htm.
+# Event codes: gp<nation><year>, jgp<nation><year>, gpf<year>, ec/fc/wc/wjc<year>,
+# owg/wtt<year>. Codes and folders vary between Seasons: copy the URL the host serves.
+#
+# 2004–05 events come from an older results vendor: uppercase result filenames and no
+# seasonYYZZ/ folder. A few Japan-hosted events from 2017–18 to 2023–24 use another vendor's
+# dataNNNN.htm pages instead of SEGnnn.htm (NHK Trophy 2017–2023, GP Final 2017, Worlds 2019
+# and 2023, World Team Trophy 2019–2023, JGP Osaka 2023).
+# Events with no results online are noted in a comment under their Season, never as URLs.
+
+# 2004–05
+https://results.isu.org/results/jgpchn2004/index.htm
+https://results.isu.org/results/jgpfra2004/index.htm
+https://results.isu.org/results/jgpger2004/index.htm
+https://results.isu.org/results/jgphun2004/index.htm
+https://results.isu.org/results/jgprom2004/index.htm
+https://results.isu.org/results/jgpscg2004/index.htm
+https://results.isu.org/results/jgpukr2004/index.htm
+https://results.isu.org/results/jgpusa2004/index.htm
+https://results.isu.org/results/gpcan04/index.htm
+https://results.isu.org/results/gpchn04/index.htm
+https://results.isu.org/results/gpfra04/index.htm
+https://results.isu.org/results/gpjpn04/index.htm
+https://results.isu.org/results/gprus04/index.htm
+https://results.isu.org/results/gpusa04/index.htm
+https://results.isu.org/results/jgpf0405/index.htm
+https://results.isu.org/results/gpf0405/index.htm
+https://results.isu.org/results/ec2005/index.htm
+https://results.isu.org/results/fc2005/index.htm
+https://results.isu.org/results/wjc2005/index.htm
+https://results.isu.org/results/wc2005/index.htm
+
+# 2005–06
+#   JGP Korea (Seoul) and JGP Germany (Nebelhorn Trophy, Oberstdorf): no results on the ISU host.
+https://results.isu.org/results/jgpand2005/index.htm
+https://results.isu.org/results/jgpbul2005/index.htm
+https://results.isu.org/results/jgpcan2005/index.htm
+https://results.isu.org/results/jgpcro2005/index.htm
+https://results.isu.org/results/jgpest2005/index.htm
+https://results.isu.org/results/jgpjpn2005/index.htm
+https://results.isu.org/results/jgppol2005/index.htm
+https://results.isu.org/results/jgpsvk2005/index.htm
+https://results.isu.org/results/gpcan05/index.htm
+https://results.isu.org/results/gpchn05/index.htm
+https://results.isu.org/results/gpfra05/index.htm
+https://results.isu.org/results/gpjpn05/index.htm
+https://results.isu.org/results/gprus05/index.htm
+https://results.isu.org/results/gpusa05/index.htm
+https://results.isu.org/results/jgpf0506/index.htm
+https://results.isu.org/results/gpf0506/index.htm
+https://results.isu.org/results/ec2006/index.htm
+https://results.isu.org/results/fc2006/index.htm
+https://results.isu.org/results/owg2006/index.htm
+https://results.isu.org/results/wjc2006/index.htm
+https://results.isu.org/results/wc2006/index.htm
+
+# 2006–07
+https://results.isu.org/results/jgpcze2006/index.htm
+https://results.isu.org/results/jgpfra2006/index.htm
+https://results.isu.org/results/jgphun2006/index.htm
+https://results.isu.org/results/jgpmex2006/index.htm
+https://results.isu.org/results/jgpned2006/index.htm
+https://results.isu.org/results/jgpnor2006/index.htm
+https://results.isu.org/results/jgprom2006/index.htm
+https://results.isu.org/results/jgptpe2006/index.htm
+https://results.isu.org/results/gpcan06/index.htm
+https://results.isu.org/results/gpchn06/index.htm
+https://results.isu.org/results/gpfra06/index.htm
+https://results.isu.org/results/gpjpn06/index.htm
+https://results.isu.org/results/gprus06/index.htm
+https://results.isu.org/results/gpusa06/index.htm
+https://results.isu.org/results/jgpf0607/index.htm
+https://results.isu.org/results/gpf0607/index.htm
+https://results.isu.org/results/ec2007/index.htm
+https://results.isu.org/results/fc2007/index.htm
+https://results.isu.org/results/wjc2007/index.htm
+https://results.isu.org/results/wc2007/index.htm
+
+# 2007–08
+https://results.isu.org/results/jgpaut2007/index.htm
+https://results.isu.org/results/jgpbul2007/index.htm
+https://results.isu.org/results/jgpcro2007/index.htm
+https://results.isu.org/results/jgpest2007/index.htm
+https://results.isu.org/results/jgpgbr2007/index.htm
+https://results.isu.org/results/jgpger2007/index.htm
+https://results.isu.org/results/jgprou2007/index.htm
+https://results.isu.org/results/jgpusa2007/index.htm
+https://results.isu.org/results/gpcan07/index.htm
+https://results.isu.org/results/gpchn07/index.htm
+https://results.isu.org/results/gpfra07/index.htm
+https://results.isu.org/results/gpjpn07/index.htm
+https://results.isu.org/results/gprus07/index.htm
+https://results.isu.org/results/gpusa07/index.htm
+https://results.isu.org/results/jgpf0708/index.htm
+https://results.isu.org/results/gpf0708/index.htm
+https://results.isu.org/results/ec2008/index.htm
+https://results.isu.org/results/fc2008/index.htm
+https://results.isu.org/results/wjc2008/index.htm
+https://results.isu.org/results/wc2008/index.htm
+
+# 2008–09
+https://results.isu.org/results/jgpblr2008/index.htm
+https://results.isu.org/results/jgpcze2008/index.htm
+https://results.isu.org/results/jgpesp2008/index.htm
+https://results.isu.org/results/jgpfra2008/index.htm
+https://results.isu.org/results/jgpgbr2008/index.htm
+https://results.isu.org/results/jgpita2008/index.htm
+https://results.isu.org/results/jgpmex2008/index.htm
+https://results.isu.org/results/jgprsa2008/index.htm
+https://results.isu.org/results/gpcan08/index.htm
+https://results.isu.org/results/gpchn08/index.htm
+https://results.isu.org/results/gpfra08/index.htm
+https://results.isu.org/results/gpjpn08/index.htm
+https://results.isu.org/results/gprus08/index.htm
+https://results.isu.org/results/gpusa08/index.htm
+https://results.isu.org/results/gpf0809/index.htm
+https://results.isu.org/results/ec2009/index.htm
+https://results.isu.org/results/fc2009/index.htm
+https://results.isu.org/results/wjc2009/index.htm
+https://results.isu.org/results/wc2009/index.htm
+https://results.isu.org/results/wtt2009/index.htm
+
+# 2009–10
+https://results.isu.org/results/jgpblr2009/index.htm
+https://results.isu.org/results/jgpcro2009/index.htm
+https://results.isu.org/results/jgpger2009/index.htm
+https://results.isu.org/results/jgphun2009/index.htm
+https://results.isu.org/results/jgppol2009/index.htm
+https://results.isu.org/results/jgptur2009/index.htm
+https://results.isu.org/results/jgpusa2009/index.htm
+https://results.isu.org/results/gpcan09/index.htm
+https://results.isu.org/results/gpchn09/index.htm
+https://results.isu.org/results/gpfra09/index.htm
+https://results.isu.org/results/gpjpn09/index.htm
+https://results.isu.org/results/gprus09/index.htm
+https://results.isu.org/results/gpusa09/index.htm
+https://results.isu.org/results/gpf0910/index.htm
+https://results.isu.org/results/ec2010/index.htm
+https://results.isu.org/results/fc2010/index.htm
+https://results.isu.org/results/owg2010/index.htm
+https://results.isu.org/results/wjc2010/index.htm
+https://results.isu.org/results/wc2010/index.htm
+
+# 2010–11
+https://results.isu.org/results/jgpaut2010/index.htm
+https://results.isu.org/results/jgpcze2010/index.htm
+https://results.isu.org/results/jgpfra2010/index.htm
+https://results.isu.org/results/jgpgbr2010/index.htm
+https://results.isu.org/results/jgpger2010/index.htm
+https://results.isu.org/results/jgpjpn2010/index.htm
+https://results.isu.org/results/jgprou2010/index.htm
+https://results.isu.org/results/gpcan2010/index.htm
+https://results.isu.org/results/gpchn2010/index.htm
+https://results.isu.org/results/gpfra2010/index.htm
+https://results.isu.org/results/gpjpn2010/index.htm
+https://results.isu.org/results/gprus2010/index.htm
+https://results.isu.org/results/gpusa2010/index.htm
+https://results.isu.org/results/gpf1011/index.htm
+https://results.isu.org/results/ec2011/index.htm
+https://results.isu.org/results/fc2011/index.htm
+https://results.isu.org/results/wjc2011/index.htm
+https://results.isu.org/results/wc2011/index.htm
+
+# 2011–12
+https://results.isu.org/results/jgpaus2011/index.htm
+https://results.isu.org/results/jgpaut2011/index.htm
+https://results.isu.org/results/jgpest2011/index.htm
+https://results.isu.org/results/jgpita2011/index.htm
+https://results.isu.org/results/jgplat2011/index.htm
+https://results.isu.org/results/jgppol2011/index.htm
+https://results.isu.org/results/jgprou2011/index.htm
+https://results.isu.org/results/gpcan2011/index.htm
+https://results.isu.org/results/gpchn2011/index.htm
+https://results.isu.org/results/gpfra2011/index.htm
+https://results.isu.org/results/gpjpn2011/index.htm
+https://results.isu.org/results/gprus2011/index.htm
+https://results.isu.org/results/gpusa2011/index.htm
+https://results.isu.org/results/gpf1112/index.htm
+https://results.isu.org/results/ec2012/index.htm
+https://results.isu.org/results/fc2012/index.htm
+https://results.isu.org/results/yog2012/index.htm
+https://results.isu.org/results/wjc2012/index.htm
+https://results.isu.org/results/wc2012/index.htm
+https://results.isu.org/results/wtt2012/index.htm
+
+# 2012–13
+https://results.isu.org/results/jgpaut2012/index.htm
+https://results.isu.org/results/jgpcro2012/index.htm
+https://results.isu.org/results/jgpfra2012/index.htm
+https://results.isu.org/results/jgpger2012/index.htm
+https://results.isu.org/results/jgpslo2012/index.htm
+https://results.isu.org/results/jgptur2012/index.htm
+https://results.isu.org/results/jgpusa2012/index.htm
+https://results.isu.org/results/gpcan2012/index.htm
+https://results.isu.org/results/gpchn2012/index.htm
+https://results.isu.org/results/gpfra2012/index.htm
+https://results.isu.org/results/gpjpn2012/index.htm
+https://results.isu.org/results/gprus2012/index.htm
+https://results.isu.org/results/gpusa2012/index.htm
+https://results.isu.org/results/gpf1213/index.htm
+https://results.isu.org/results/ec2013/index.htm
+https://results.isu.org/results/fc2013/index.htm
+https://results.isu.org/results/wjc2013/index.htm
+https://results.isu.org/results/wc2013/index.htm
+https://results.isu.org/results/wtt2013/index.htm
+
+# 2013–14
+https://results.isu.org/results/jgpblr2013/index.htm
+https://results.isu.org/results/jgpcze2013/index.htm
+https://results.isu.org/results/jgpest2013/index.htm
+https://results.isu.org/results/jgplat2013/index.htm
+https://results.isu.org/results/jgpmex2013/index.htm
+https://results.isu.org/results/jgppol2013/index.htm
+https://results.isu.org/results/jgpsvk2013/index.htm
+https://results.isu.org/results/gpcan2013/index.htm
+https://results.isu.org/results/gpchn2013/index.htm
+https://results.isu.org/results/gpfra2013/index.htm
+https://results.isu.org/results/gpjpn2013/index.htm
+https://results.isu.org/results/gprus2013/index.htm
+https://results.isu.org/results/gpusa2013/index.htm
+https://results.isu.org/results/gpf1314/index.htm
+https://results.isu.org/results/ec2014/index.htm
+https://results.isu.org/results/fc2014/index.htm
+https://results.isu.org/results/owg2014/index.htm
+https://results.isu.org/results/wjc2014/index.htm
+https://results.isu.org/results/wc2014/index.htm
+
+# 2014–15
+https://results.isu.org/results/jgpcro2014/index.htm
+https://results.isu.org/results/jgpcze2014/index.htm
+https://results.isu.org/results/jgpest2014/index.htm
+https://results.isu.org/results/jgpfra2014/index.htm
+https://results.isu.org/results/jgpger2014/index.htm
+https://results.isu.org/results/jgpjpn2014/index.htm
+https://results.isu.org/results/jgpslo2014/index.htm
+https://results.isu.org/results/gpcan2014/index.htm
+https://results.isu.org/results/gpchn2014/index.htm
+https://results.isu.org/results/gpfra2014/index.htm
+https://results.isu.org/results/gpjpn2014/index.htm
+https://results.isu.org/results/gprus2014/index.htm
+https://results.isu.org/results/gpusa2014/index.htm
+https://results.isu.org/results/gpf1415/index.htm
+https://results.isu.org/results/ec2015/index.htm
+https://results.isu.org/results/fc2015/index.htm
+https://results.isu.org/results/wjc2015/index.htm
+https://results.isu.org/results/wc2015/index.htm
+https://results.isu.org/results/wtt2015/index.htm
+
+# 2015–16
+https://results.isu.org/results/season1516/jgpaut2015/index.htm
+https://results.isu.org/results/season1516/jgpcro2015/index.htm
+https://results.isu.org/results/season1516/jgpesp2015/index.htm
+https://results.isu.org/results/season1516/jgplat2015/index.htm
+https://results.isu.org/results/season1516/jgppol2015/index.htm
+https://results.isu.org/results/season1516/jgpsvk2015/index.htm
+https://results.isu.org/results/season1516/jgpusa2015/index.htm
+https://results.isu.org/results/season1516/gpcan2015/index.htm
+https://results.isu.org/results/season1516/gpchn2015/index.htm
+https://results.isu.org/results/season1516/gpfra2015/index.htm
+https://results.isu.org/results/season1516/gpjpn2015/index.htm
+https://results.isu.org/results/season1516/gprus2015/index.htm
+https://results.isu.org/results/season1516/gpusa2015/index.htm
+https://results.isu.org/results/season1516/gpf1516/index.htm
+https://results.isu.org/results/season1516/ec2016/index.htm
+https://results.isu.org/results/season1516/fc2016/index.htm
+https://results.isu.org/results/season1516/yog2016/index.htm
+https://results.isu.org/results/season1516/wjc2016/index.htm
+https://results.isu.org/results/season1516/wc2016/index.htm
+
+# 2016–17
+#   World Team Trophy 2017 (Tokyo): no results on the ISU host.
+https://results.isu.org/results/season1617/jgpcze2016/index.htm
+https://results.isu.org/results/season1617/jgpest2016/index.htm
+https://results.isu.org/results/season1617/jgpfra2016/index.htm
+https://results.isu.org/results/season1617/jgpger2016/index.htm
+https://results.isu.org/results/season1617/jgpjpn2016/index.htm
+https://results.isu.org/results/season1617/jgprus2016/index.htm
+https://results.isu.org/results/season1617/jgpslo2016/index.htm
+https://results.isu.org/results/season1617/gpcan2016/index.htm
+https://results.isu.org/results/season1617/gpchn2016/index.htm
+https://results.isu.org/results/season1617/gpfra2016/index.htm
+https://results.isu.org/results/season1617/gpjpn2016/index.htm
+https://results.isu.org/results/season1617/gprus2016/index.htm
+https://results.isu.org/results/season1617/gpusa2016/index.htm
+https://results.isu.org/results/season1617/gpf1617/index.htm
+https://results.isu.org/results/season1617/ec2017/index.htm
+https://results.isu.org/results/season1617/fc2017/index.htm
+https://results.isu.org/results/season1617/wjc2017/index.htm
+https://results.isu.org/results/season1617/wc2017/index.htm
+
+# 2017–18
+https://results.isu.org/results/season1718/jgpaus2017/index.htm
+https://results.isu.org/results/season1718/jgpaut2017/index.htm
+https://results.isu.org/results/season1718/jgpblr2017/index.htm
+https://results.isu.org/results/season1718/jgpcro2017/index.htm
+https://results.isu.org/results/season1718/jgpita2017/index.htm
+https://results.isu.org/results/season1718/jgplat2017/index.htm
+https://results.isu.org/results/season1718/jgppol2017/index.htm
+https://results.isu.org/results/season1718/gpcan2017/index.htm
+https://results.isu.org/results/season1718/gpchn2017/index.htm
+https://results.isu.org/results/season1718/gpfra2017/index.htm
+https://results.isu.org/results/season1718/gpjpn2017/index.htm
+https://results.isu.org/results/season1718/gprus2017/index.htm
+https://results.isu.org/results/season1718/gpusa2017/index.htm
+https://results.isu.org/results/season1718/gpf1718/index.htm
+https://results.isu.org/results/season1718/ec2018/index.htm
+https://results.isu.org/results/season1718/fc2018/index.htm
+https://results.isu.org/results/season1718/owg2018/index.htm
+https://results.isu.org/results/season1718/wjc2018/index.htm
+https://results.isu.org/results/season1718/wc2018/index.htm
+
+# 2018–19
+https://results.isu.org/results/season1819/jgparm2018/index.htm
+https://results.isu.org/results/season1819/jgpaut2018/index.htm
+https://results.isu.org/results/season1819/jgpcan2018/index.htm
+https://results.isu.org/results/season1819/jgpcze2018/index.htm
+https://results.isu.org/results/season1819/jgpltu2018/index.htm
+https://results.isu.org/results/season1819/jgpslo2018/index.htm
+https://results.isu.org/results/season1819/jgpsvk2018/index.htm
+https://results.isu.org/results/season1819/gpcan2018/index.htm
+https://results.isu.org/results/season1819/gpfin2018/index.htm
+https://results.isu.org/results/season1819/gpfra2018/index.htm
+https://results.isu.org/results/season1819/gpjpn2018/index.htm
+https://results.isu.org/results/season1819/gprus2018/index.htm
+https://results.isu.org/results/season1819/gpusa2018/index.htm
+https://results.isu.org/results/season1819/gpf1819/index.htm
+https://results.isu.org/results/season1819/ec2019/index.htm
+https://results.isu.org/results/season1819/fc2019/index.htm
+https://results.isu.org/results/season1819/wjc2019/index.htm
+https://results.isu.org/results/season1819/wc2019/index.htm
+https://results.isu.org/results/season1819/wtt2019/index.htm
+
+# 2019–20
+#   World Championships 2020 (Montreal): cancelled.
+https://results.isu.org/results/season1920/jgpcro2019/index.htm
+https://results.isu.org/results/season1920/jgpfra2019/index.htm
+https://results.isu.org/results/season1920/jgpita2019/index.htm
+https://results.isu.org/results/season1920/jgplat2019/index.htm
+https://results.isu.org/results/season1920/jgppol2019/index.htm
+https://results.isu.org/results/season1920/jgprus2019/index.htm
+https://results.isu.org/results/season1920/jgpusa2019/index.htm
+https://results.isu.org/results/season1920/gpcan2019/index.htm
+https://results.isu.org/results/season1920/gpchn2019/index.htm
+https://results.isu.org/results/season1920/gpfra2019/index.htm
+https://results.isu.org/results/season1920/gpjpn2019/index.htm
+https://results.isu.org/results/season1920/gprus2019/index.htm
+https://results.isu.org/results/season1920/gpusa2019/index.htm
+https://results.isu.org/results/season1920/gpf1920/index.htm
+https://results.isu.org/results/season1920/ec2020/index.htm
+https://results.isu.org/results/season1920/fc2020/index.htm
+https://results.isu.org/results/season1920/wyog2020/index.htm
+https://results.isu.org/results/season1920/wjc2020/index.htm
+
+# 2020–21
+#   Skate America, Cup of China and Rostelecom Cup 2020: held, but no results on the ISU host.
+#   Skate Canada, Internationaux de France, Grand Prix Final, the whole JGP series,
+#   European, Four Continents and World Junior Championships: cancelled.
+https://results.isu.org/results/season2021/gpjpn2020/index.htm
+https://results.isu.org/results/season2021/wc2021/index.htm
+https://results.isu.org/results/season2021/wtt2021/index.htm
+
+# 2021–22
+#   Cup of China replaced by Gran Premio d'Italia. Grand Prix and JGP Final (Osaka): cancelled.
+https://results.isu.org/results/season2122/jgpaut2021/index.htm
+https://results.isu.org/results/season2122/jgpfra2021/index.htm
+https://results.isu.org/results/season2122/jgpfra22021/index.htm
+https://results.isu.org/results/season2122/jgppol2021/index.htm
+https://results.isu.org/results/season2122/jgprus2021/index.htm
+https://results.isu.org/results/season2122/jgpslo2021/index.htm
+https://results.isu.org/results/season2122/jgpsvk2021/index.htm
+https://results.isu.org/results/season2122/gpcan2021/index.htm
+https://results.isu.org/results/season2122/gpfra2021/index.htm
+https://results.isu.org/results/season2122/gpita2021/index.htm
+https://results.isu.org/results/season2122/gpjpn2021/index.htm
+https://results.isu.org/results/season2122/gprus2021/index.htm
+https://results.isu.org/results/season2122/gpusa2021/index.htm
+https://results.isu.org/results/season2122/ec2022/index.htm
+https://results.isu.org/results/season2122/fc2022/index.htm
+https://results.isu.org/results/season2122/owg2022/index.htm
+https://results.isu.org/results/season2122/wjc2022/index.htm
+https://results.isu.org/results/season2122/wc2022/index.htm
+
+# 2022–23
+#   JGP Armenia (Yerevan): cancelled.
+https://results.isu.org/results/season2223/jgp5pol2022/index.htm
+https://results.isu.org/results/season2223/jgpcze2022/index.htm
+https://results.isu.org/results/season2223/jgpfra2022/index.htm
+https://results.isu.org/results/season2223/jgpita2022/index.htm
+https://results.isu.org/results/season2223/jgplat2022/index.htm
+https://results.isu.org/results/season2223/jgppol2022/index.htm
+https://results.isu.org/results/season2223/gpcan2022/index.htm
+https://results.isu.org/results/season2223/gpfin2022/index.htm
+https://results.isu.org/results/season2223/gpfra2022/index.htm
+https://results.isu.org/results/season2223/gpgbr2022/index.htm
+https://results.isu.org/results/season2223/gpjpn2022/index.htm
+https://results.isu.org/results/season2223/gpusa2022/index.htm
+https://results.isu.org/results/season2223/gpf2022/index.htm
+https://results.isu.org/results/season2223/ec2023/index.htm
+https://results.isu.org/results/season2223/fc2023/index.htm
+https://results.isu.org/results/season2223/wjc2023/index.htm
+https://results.isu.org/results/season2223/wc2023/index.htm
+https://results.isu.org/results/season2223/wtt2023/index.htm
+
+# 2023–24
+https://results.isu.org/results/season2324/jgparm2023/index.htm
+https://results.isu.org/results/season2324/jgpaut2023/index.htm
+https://results.isu.org/results/season2324/jgphun2023/index.htm
+https://results.isu.org/results/season2324/jgpjpn2023/index.htm
+https://results.isu.org/results/season2324/jgppol2023/index.htm
+https://results.isu.org/results/season2324/jgptha2023/index.htm
+https://results.isu.org/results/season2324/jgptur2023/index.htm
+https://results.isu.org/results/season2324/gpcan2023/index.htm
+https://results.isu.org/results/season2324/gpchn2023/index.htm
+https://results.isu.org/results/season2324/gpfin2023/index.htm
+https://results.isu.org/results/season2324/gpfra2023/index.htm
+https://results.isu.org/results/season2324/gpjpn2023/index.htm
+https://results.isu.org/results/season2324/gpusa2023/index.htm
+https://results.isu.org/results/season2324/gpf2023/index.htm
+https://results.isu.org/results/season2324/ec2024/index.htm
+https://results.isu.org/results/season2324/fc2024/index.htm
+https://results.isu.org/results/season2324/wyog2024/index.htm
+https://results.isu.org/results/season2324/wjc2024/index.htm
+https://results.isu.org/results/season2324/wc2024/index.htm
+
+# 2024–25
+https://results.isu.org/results/season2425/jgpchn2024/index.htm
+https://results.isu.org/results/season2425/jgpcze2024/index.htm
+https://results.isu.org/results/season2425/jgplat2024/index.htm
+https://results.isu.org/results/season2425/jgppol2024/index.htm
+https://results.isu.org/results/season2425/jgpslo2024/index.htm
+https://results.isu.org/results/season2425/jgptha2024/index.htm
+https://results.isu.org/results/season2425/jgptur2024/index.htm
+https://results.isu.org/results/season2425/gpcan2024/index.htm
+https://results.isu.org/results/season2425/gpchn2024/index.htm
+https://results.isu.org/results/season2425/gpfin2024/index.htm
+https://results.isu.org/results/season2425/gpfra2024/index.htm
+https://results.isu.org/results/season2425/gpjpn2024/index.htm
+https://results.isu.org/results/season2425/gpusa2024/index.htm
+https://results.isu.org/results/season2425/gpf2024/index.htm
+https://results.isu.org/results/season2425/ec2025/index.htm
+https://results.isu.org/results/season2425/fc2025/index.htm
+https://results.isu.org/results/season2425/wjc2025/index.htm
+https://results.isu.org/results/season2425/wc2025/index.htm
+https://results.isu.org/results/season2425/wtt2025/index.htm
+
+# 2025–26
+https://results.isu.org/results/season2526/jgpaze2025/index.htm
+https://results.isu.org/results/season2526/jgpita2025/index.htm
+https://results.isu.org/results/season2526/jgplat2025/index.htm
+https://results.isu.org/results/season2526/jgppol2025/index.htm
+https://results.isu.org/results/season2526/jgptha2025/index.htm
+https://results.isu.org/results/season2526/jgptur2025/index.htm
+https://results.isu.org/results/season2526/jgpuae2025/index.htm
+https://results.isu.org/results/season2526/gpcan2025/index.htm
+https://results.isu.org/results/season2526/gpchn2025/index.htm
+https://results.isu.org/results/season2526/gpfin2025/index.htm
+https://results.isu.org/results/season2526/gpfra2025/index.htm
+https://results.isu.org/results/season2526/gpjpn2025/index.htm
+https://results.isu.org/results/season2526/gpusa2025/index.htm
+https://results.isu.org/results/season2526/gpf2025/index.htm
+https://results.isu.org/results/season2526/qogfsk2025/index.htm
+https://results.isu.org/results/season2526/ec2026/index.htm
+https://results.isu.org/results/season2526/fc2026/index.htm
+https://results.isu.org/results/season2526/owg2026/index.htm
+https://results.isu.org/results/season2526/wjc2026/index.htm
+https://results.isu.org/results/season2526/wc2026/index.htm
+
+# 2026–27
+#   In progress. Not yet online: the rest of the Grand Prix series and the Final,
+#   European, Four Continents, World Junior and World Championships.
+https://results.isu.org/results/season2627/jgpchn2026/index.htm
+https://results.isu.org/results/season2627/jgpgeo2026/index.htm
+https://results.isu.org/results/season2627/jgplat2026/index.htm
+https://results.isu.org/results/season2627/jgppol2026/index.htm
+https://results.isu.org/results/season2627/jgpslo2026/index.htm
+https://results.isu.org/results/season2627/jgptha2026/index.htm
+https://results.isu.org/results/season2627/jgptur2026/index.htm
+https://results.isu.org/results/season2627/gpfra2026/index.htm
