@@ -1,0 +1,57 @@
+# Dev defaults let `docker compose up` run on a clean checkout; the box sets real values in .env.
+# POSTGRES_* only take effect when the pgdata volume is first created: set them before the first up.
+x-database-url: &database-url
+  DATABASE_URL: postgres://${POSTGRES_USER:-iceskatesong}:${POSTGRES_PASSWORD:-iceskatesong}@postgres:5432/${POSTGRES_DB:-iceskatesong}
+
+services:
+  postgres:
+    image: postgres:18
+    # Never the C locale: keep the image default en_US.utf8. Under C, pg_trgm treats
+    # Japanese/Cyrillic as non-letters and indexes nothing for them, and the locale
+    # is fixed at initdb, so changing it later means a dump and restore.
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-iceskatesong}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-iceskatesong}
+      POSTGRES_DB: ${POSTGRES_DB:-iceskatesong}
+    volumes:
+      - pgdata:/var/lib/postgresql
+    ports:
+      - 127.0.0.1:${POSTGRES_PORT:-5432}:5432
+    healthcheck:
+      test: pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"
+      interval: 2s
+      retries: 15
+    restart: unless-stopped
+
+  migrate:
+    build: db
+    environment: *database-url
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    build: web
+    environment:
+      <<: *database-url
+      ORIGIN: ${ORIGIN:-http://localhost:8080}
+    ports:
+      - 127.0.0.1:${WEB_PORT:-8080}:3000
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  import:
+    build: import
+    env_file:
+      - path: .env
+        required: false
+    environment: *database-url
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+volumes:
+  pgdata:
