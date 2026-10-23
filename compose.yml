@@ -3,8 +3,16 @@
 x-database-url: &database-url
   DATABASE_URL: postgres://${POSTGRES_USER:-iceskatesong}:${POSTGRES_PASSWORD:-iceskatesong}@postgres:5432/${POSTGRES_DB:-iceskatesong}
 
+x-logging: &logging
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: "3"
+
 services:
   postgres:
+    <<: *logging
     image: postgres:18
     # Never the C locale: keep the image default en_US.utf8. Under C, pg_trgm treats
     # Japanese/Cyrillic as non-letters and indexes nothing for them, and the locale
@@ -24,6 +32,7 @@ services:
     restart: unless-stopped
 
   migrate:
+    <<: *logging
     build: db
     environment: *database-url
     depends_on:
@@ -31,6 +40,7 @@ services:
         condition: service_healthy
 
   web:
+    <<: *logging
     build: web
     environment:
       <<: *database-url
@@ -43,16 +53,52 @@ services:
     restart: unless-stopped
 
   import:
+    <<: *logging
     build: import
-    env_file:
-      - path: .env
-        required: false
-    environment: *database-url
+    # Named, not the whole .env, so the R2 keys and Tunnel token stay out of this container.
+    environment:
+      <<: *database-url
+      IMPORT_CONTACT_EMAIL: ${IMPORT_CONTACT_EMAIL:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      YOUTUBE_API_KEY: ${YOUTUBE_API_KEY:-}
     volumes:
       - import-cache:/app/cache
     depends_on:
       migrate:
         condition: service_completed_successfully
+    restart: unless-stopped
+
+  # backup and cloudflared only run where .env sets COMPOSE_PROFILES=prod (the box): they need its secrets.
+  backup:
+    <<: *logging
+    build: backup
+    profiles: [prod]
+    # bash as PID 1 ignores SIGTERM; tini lets a deploy stop the sleep loop at once.
+    init: true
+    environment:
+      <<: *database-url
+      R2_BUCKET: ${R2_BUCKET:-}
+      HEALTHCHECKS_URL: ${HEALTHCHECKS_URL:-}
+      RCLONE_CONFIG_R2_TYPE: s3
+      RCLONE_CONFIG_R2_PROVIDER: Cloudflare
+      RCLONE_CONFIG_R2_ENDPOINT: ${R2_ENDPOINT:-}
+      RCLONE_CONFIG_R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
+      RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
+      # An object-scoped R2 token may not read or create buckets.
+      RCLONE_CONFIG_R2_NO_CHECK_BUCKET: "true"
+    # Never on migrate: a restore must run before migrate creates tables.
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  cloudflared:
+    <<: *logging
+    image: cloudflare/cloudflared:2026.10.0
+    profiles: [prod]
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
     restart: unless-stopped
 
 volumes:

@@ -211,7 +211,7 @@ A visitor pastes any YouTube URL plus hints; the site finds the Performance itse
 
 ([Where does it run: hosting, database and deployment?][t11], [Which web framework runs the public site and the Admin panel?][t18], [What do the hosting options cost, and how do they scale?][t6])
 
-- **Repo layout**: `compose.yml`, `web/`, `import/`, `db/` at the root.
+- **Repo layout**: `compose.yml`, `web/`, `import/`, `db/`, `backup/`, `scripts/` at the root.
 - **Host**: the owner's Radxa Rock 5 ITX (ARM64, 24 GB) behind the existing Cloudflare Tunnel; Docker volumes on NVMe/SATA. Secrets in `.env` on the box, never in git.
 - **Compose services**: `migrate` (one-shot), `web`, `import`, `postgres`, `backup`, `cloudflared`. `web` and `import` start only after `migrate` succeeds.
 - **Database**: Postgres (pinned current major) with `pg_trgm` and `unaccent` (plus the 3-line `IMMUTABLE` `unaccent` wrapper for generated columns); never the `C` locale.

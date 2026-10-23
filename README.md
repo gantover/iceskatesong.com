@@ -44,4 +44,20 @@ Start an Import by hand (until the Admin's "Import now" button exists). `IMPORT_
 docker compose exec postgres psql -U iceskatesong -c "insert into imports default values"
 ```
 
-Check the ARM64 build: `docker buildx build --platform linux/arm64 web` (same for `db` and `import`).
+Check the ARM64 build: `docker buildx build --platform linux/arm64 web` (same for `db`, `import` and `backup`).
+
+## On the box
+
+`.env` sets `COMPOSE_PROFILES=prod`, which adds `backup` (nightly `pg_dump` to R2 at 03:00 UTC, 30-day retention, then a Healthchecks ping) and `cloudflared` (the Tunnel; its public hostname points at `http://web:3000`). Logs: `docker compose logs <service>`, rotated at 3 × 10 MB.
+
+```sh
+scripts/deploy.sh                              # git pull --ff-only && docker compose up -d --build
+docker compose run --rm backup backup.sh       # one backup now
+```
+
+Restore (the setup drill on a laptop, or a move to a new host). Needs the `R2_*` values in `.env` and a Postgres with no `pgdata` volume yet, before `migrate` has run:
+
+```sh
+scripts/restore.sh                             # newest dump; or scripts/restore.sh iceskatesong-<date>.sql.gz
+docker compose up -d                           # migrate then upgrades the restored schema to head
+```
