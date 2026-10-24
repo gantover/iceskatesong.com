@@ -143,11 +143,14 @@ def link(conn, problems: list[dict]) -> dict:
             problems.append({"step": "youtube", "kind": NO_MATCH, "key": video.youtube_id,
                              "detail": {"reason": reason, "performances": ids}})
         else:
-            pairs += [(video.youtube_id, i) for i in ids]
+            # A clip starts at 0; a stream's start time is unknown (null), so it plays after clips.
+            start = None if video.duration_seconds > STREAM_SECONDS else 0
+            pairs += [(video.youtube_id, start, i) for i in ids]
     created = conn.execute(
-        """insert into performance_videos (youtube_id, performance_id, origin)
-           select youtube_id, performance_id, 'official' from unnest(%s::text[], %s::bigint[]) as v (youtube_id, performance_id)
-           on conflict do nothing""", [list(column) for column in zip(*pairs)] or [[], []]).rowcount
+        """insert into performance_videos (youtube_id, start_seconds, performance_id, origin)
+           select youtube_id, start_seconds, performance_id, 'official'
+           from unnest(%s::text[], %s::int[], %s::bigint[]) as v (youtube_id, start_seconds, performance_id)
+           on conflict do nothing""", [list(column) for column in zip(*pairs)] or [[], [], []]).rowcount
     return {"performance video": {"created": created, "updated": 0}} if created else {}
 
 
@@ -229,7 +232,7 @@ def surnames(name: str) -> list[list[str]]:
 
 
 def givens(name: str) -> list[str]:
-    return [norm(w) for part in name.split("/") for w in part.split() if not printed_surname(w)]
+    return [x for part in name.split("/") for w in part.split() if not printed_surname(w) for x in norm(w).split()]
 
 
 def close(a: str, b: str) -> bool:

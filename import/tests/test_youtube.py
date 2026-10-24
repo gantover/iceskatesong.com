@@ -99,7 +99,7 @@ def test_a_stream_naming_a_segment_links_even_with_a_ceremony_and_one_naming_non
 def test_a_hyphenated_given_name_is_not_a_surname():
     assert youtube.surnames("Jean-Luc BAKER") == [["baker"]]
     assert youtube.surnames("Liam McBEATH / Sinead O'SHEA") == [["mcbeath"], ["o", "shea"]]
-    assert youtube.givens("Jean-Luc BAKER") == ["jean luc"]
+    assert youtube.givens("Jean-Luc BAKER") == ["jean", "luc"]
 
 
 def test_a_title_naming_another_year_links_nothing():
@@ -199,7 +199,7 @@ def test_an_import_links_the_sample_clips_and_streams_once(conn, site, tmp_path)
     assert status == "succeeded"
     # 96 clips, and 15 streams untimed to their Segment's 6 Performances
     assert counts["performance video"] == {"created": 96 + 15 * 6, "updated": 0}
-    assert links(conn) == (186, 0, 0)
+    assert links(conn) == (186, 96, 0)
     assert conn.execute("select count(*) from youtube_videos").fetchone() == (len(SAMPLE),)
     assert problems(conn, youtube.NO_MATCH) == [
         v["id"] for v in SAMPLE if v["snippet"]["title"].startswith("Junior Ice Dance Rhythm Dance | Grand Prix 2025")]
@@ -207,7 +207,7 @@ def test_an_import_links_the_sample_clips_and_streams_once(conn, site, tmp_path)
     status, counts, _ = run_import(conn, site, tmp_path, youtube_api=api)
 
     assert (status, counts) == ("succeeded", {})
-    assert links(conn) == (186, 0, 0)
+    assert links(conn) == (186, 96, 0)
 
 
 def test_a_hidden_link_stays_hidden_after_a_reimport(conn, site, tmp_path):
@@ -215,11 +215,11 @@ def test_a_hidden_link_stays_hidden_after_a_reimport(conn, site, tmp_path):
     run_import(conn, site, tmp_path, youtube_api=api)
     conn.execute("""update performance_videos set status = 'hidden' where youtube_id in (select youtube_id from youtube_videos
                     where title like 'Men Free Skating |%%' or title like 'Ilia MALININ (USA) | Men Free%%')""")
-    assert links(conn) == (186, 0, 7)
+    assert links(conn) == (186, 96, 7)
 
     run_import(conn, site, tmp_path, youtube_api=api)
 
-    assert links(conn) == (186, 0, 7)
+    assert links(conn) == (186, 96, 7)
 
 
 def test_cache_rows_older_than_25_days_are_refreshed_and_vanished_videos_leave_the_cache(conn, site, tmp_path):
@@ -248,7 +248,7 @@ def test_cache_rows_past_30_days_leave_the_cache_on_an_import_without_a_fetch_an
 
     assert conn.execute("select count(*) from youtube_videos").fetchone() == (len(SAMPLE) - 1,)
     assert conn.execute("select count(*) from youtube_videos where youtube_id = %s", [old]).fetchone() == (0,)
-    assert links(conn) == (186, 0, 0)
+    assert links(conn) == (186, 96, 0)
 
 
 def test_a_failed_youtube_fetch_is_a_problem_and_keeps_the_cache(conn, site, tmp_path):
@@ -262,7 +262,7 @@ def test_a_failed_youtube_fetch_is_a_problem_and_keeps_the_cache(conn, site, tmp
     assert status == "succeeded"
     assert problems(conn, "fetch failed") == [youtube.API + "playlistItems"]
     assert conn.execute("select count(*) from youtube_videos").fetchone() == (len(SAMPLE),)
-    assert links(conn) == (186, 0, 0)
+    assert links(conn) == (186, 96, 0)
 
 
 def test_the_api_key_goes_in_a_header_never_in_a_url_or_a_problem(conn, site, tmp_path):
