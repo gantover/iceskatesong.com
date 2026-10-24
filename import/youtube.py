@@ -239,8 +239,9 @@ def match(video: Video, events: list[Event]) -> tuple[list, str | None]:
         return [], None
     if discipline == "ice dance":
         segment_type = DANCE_TYPE.get(segment_type, segment_type)
-    # Junior is known from the channel or the title; a stream without "junior" on the main channel is senior.
-    level = "junior" if video.channel_id == JGP or re.search(r"\bjunior\b|\bjr\b", t) else "senior" if stream else None
+    # Junior is known from the channel or the title (#JGPFigure since the junior channel stopped in 2023);
+    # a stream not marked junior on the main channel is senior.
+    level = "junior" if video.channel_id == JGP or re.search(r"\bjunior\b|\bjr\b|\bjgp", t) else "senior" if stream else None
 
     # The event the title names comes first; the publishedAt window only narrows a title without a year.
     years = {int(y) for y in re.findall(r"\b(?:19|20)\d\d\b", t)}

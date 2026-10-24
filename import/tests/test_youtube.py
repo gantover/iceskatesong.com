@@ -64,6 +64,8 @@ def test_a_full_segment_stream_links_every_performance_of_its_segment():
 
     assert reason is None
     assert len(ids) == 6 and {i[:6] for i in ids} == {"SEG002"}  # senior: the title doesn't say junior
+    ids, _ = youtube.match(video("Men Free Skating | Grand Prix Final 2025 | #JGPFigure", minutes=70), gpf_events())
+    assert {i[:6] for i in ids} == {"SEG010"}
 
 
 def test_a_skaters_n_to_m_stream_links_only_that_start_number_range():
