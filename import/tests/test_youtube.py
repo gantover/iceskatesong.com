@@ -86,6 +86,22 @@ def test_a_group_stream_without_a_range_and_practice_streams_are_not_linked():
     assert youtube.match(video("Men Free Skating Practice | Grand Prix Final 2025", minutes=40), competitions) is None
 
 
+def test_a_stream_naming_a_segment_links_even_with_a_ceremony_and_one_naming_none_is_not_ours():
+    for title in ("Opening Ceremony and Men Free Skating | Grand Prix Final 2025",
+                  "Men Free Skating & Medal Ceremony | Grand Prix Final 2025"):
+        ids, reason = youtube.match(video(title, minutes=90), gpf())
+        assert reason is None and {i[:6] for i in ids} == {"SEG002"}, title
+    assert youtube.match(video("Men Medal Ceremony | Grand Prix Final 2025", minutes=40), gpf()) is None
+    assert youtube.match(video("Backstage 360 | Grand Prix Final 2025", minutes=40), gpf()) is None
+    assert youtube.match(video("Ilia MALININ (USA) | Men Free Skating Medal Ceremony | Grand Prix Final 2025"), gpf()) is None
+
+
+def test_a_hyphenated_given_name_is_not_a_surname():
+    assert youtube.surnames("Jean-Luc BAKER") == [["baker"]]
+    assert youtube.surnames("Liam McBEATH / Sinead O'SHEA") == [["mcbeath"], ["o", "shea"]]
+    assert youtube.givens("Jean-Luc BAKER") == ["jean luc"]
+
+
 def test_a_title_naming_another_year_links_nothing():
     assert youtube.match(video("Ilia MALININ (USA) | Men Free Skating | Grand Prix Final 2024"), gpf()) is None
 
@@ -141,6 +157,7 @@ def test_a_clip_without_a_segment_type_is_logged_and_short_or_skipped_videos_are
     assert youtube.match(video("Ilia MALININ (USA) | Men | Grand Prix Final 2025"), competitions) == ([], "no Segment type in the title")
     assert youtube.match(video("Ilia MALININ (USA) | Men Free Skating | Grand Prix Final 2025", minutes=1), competitions) is None
     assert youtube.match(video("Ilia MALININ (USA) | Men Winner Interview | Grand Prix Final 2025"), competitions) is None
+    assert youtube.match(video("Ilia MALININ (USA) - Grand Prix Final 2025"), competitions) is None  # a reel: no Discipline, no Segment type
 
 
 def test_a_clip_without_a_discipline_word_is_picked_by_its_surnames():

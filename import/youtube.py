@@ -176,9 +176,9 @@ def norm(s: str) -> str:
 
 # Not one Performance: other sports, highlights, interviews, galas, live and so on.
 SKIP = (r"#shorts|\bwinners?\b|speed ?skating|short ?track|\b\d{3,5} ?m\b|relay|highlights|interview|relive|recap|"
-        r"press conference|medal ceremony|victory ceremony|warm ?up|preview|behind the scenes|exhibition|gala|kiss|"
+        r"press conference|warm ?up|preview|behind the scenes|exhibition|gala|kiss|"
         r"live\b|🔴|day \d|best of|top \d")
-STREAM_SKIP = r"|practice|ceremony|medals"
+STREAM_SKIP = r"|practice"
 DISCIPLINES = [("ice dance", r"ice dance|\bdance\b"), ("pairs", r"\bpairs?\b"), ("women", r"\bwomen\b|\bladies\b|\bgirls\b"),
                ("men", r"\bmen\b|\bboys\b")]
 # Short Dance is matched as Rhythm Dance (SAME_TYPE); in dance, Free and Short are mapped below.
@@ -219,8 +219,8 @@ def competition_words(city: str, name: str) -> frozenset[str]:
 
 
 def printed_surname(word: str) -> bool:
-    """ISU prints surnames in capitals; 2+ capitals also catches McBEATH and O'SHEA."""
-    return sum(c.isupper() for c in word) >= 2
+    """ISU prints surnames in capitals: two in a row catches McBEATH and O'SHEA but not Jean-Luc."""
+    return any(a.isupper() and b.isupper() for a, b in zip(word, word[1:]))
 
 
 def surnames(name: str) -> list[list[str]]:
@@ -247,6 +247,11 @@ def match(video: Video, competitions: list[Competition]) -> tuple[list, str | No
     if re.search(SKIP + (STREAM_SKIP if stream else ""), video.title, re.I) or video.duration_seconds < CLIP_SECONDS:
         return None
     discipline, segment_type = classify(title, DISCIPLINES), classify(title, SEGMENT_TYPES)
+    if stream:
+        if not segment_type:  # backstage, ceremonies; one naming a Segment type shows it even with a ceremony
+            return None
+    elif not (discipline or segment_type) or re.search(r"ceremony|medals", title):  # reels, talks, ceremonies
+        return None
     # Junior is known from the channel or the title (#JGPFigure since the junior channel stopped in 2023);
     # a stream not marked junior on the main channel is senior.
     level = "junior" if video.channel_id == JGP or re.search(r"\bjunior\b|\bjr\b|\bjgp", title) else "senior" if stream else None
@@ -267,7 +272,7 @@ def match(video: Video, competitions: list[Competition]) -> tuple[list, str | No
     segments = [s for c in candidates for s in c.segments if (not discipline or s.discipline == discipline)
                 and (not segment_type or SAME_TYPE.get(s.segment_type, s.segment_type) == dance_type(s, segment_type))
                 and (not level or s.level == level)]
-    ids, reason = (stream_match if stream else clip_match)(title, segment_type, segments)
+    ids, reason = stream_match(title, segments) if stream else clip_match(title, segment_type, segments)
     if not verified:
         return (ids, "matched by the publishedAt window only") if ids and not reason else None
     return ids, reason
@@ -299,9 +304,9 @@ def clip_match(title: str, segment_type: str | None, segments: list[Segment]) ->
     return (top, None) if len(top) == 1 else (top, "several entries match the title")
 
 
-def stream_match(title: str, segment_type: str | None, segments: list[Segment]) -> tuple[list, str | None]:
+def stream_match(title: str, segments: list[Segment]) -> tuple[list, str | None]:
     """A full-segment stream: every Performance of its Segment, or of the "Skaters N–M" start numbers it shows."""
-    if len(segments) != 1 or not segment_type:
+    if len(segments) != 1:
         return [], "stream matches no single Segment"
     entries = segments[0].entries
     if m := re.search(r"\bskaters? (\d+) (\d+)\b", title):
