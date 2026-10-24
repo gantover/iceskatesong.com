@@ -16,7 +16,7 @@ from urllib.parse import urlencode
 
 API = "https://www.googleapis.com/youtube/v3/"
 SKATING_ISU, JGP = "UCVZpqbnDjHyScSYGFPMUtYA", "UCbv3gsBXzIwotCt2JGySfJA"  # JGP: the junior channel
-REFRESH_DAYS = 25
+REFRESH_DAYS, CACHE_DAYS = 25, 30  # the API terms allow 30 days
 CLIP_SECONDS, STREAM_SECONDS = 100, 30 * 60
 NO_MATCH = "official video with no Performance match"
 
@@ -47,7 +47,7 @@ class Segment:
 
 
 @dataclass
-class Event:
+class Competition:
     code: str  # the last part of the ISU event path, e.g. gpf2025
     name: str
     city: str
@@ -70,7 +70,7 @@ def fetch(conn, get, problems: list[dict]) -> None:
 
     `conn` is in autocommit mode (the fetch phase). A failed request is a problem and leaves the rest of the cache as it was.
     """
-    path = "playlistItems"
+    path = "playlistItems"  # the request in flight, named by the problem when one fails
     try:
         ids = []
         for channel in (SKATING_ISU, JGP):
@@ -111,24 +111,33 @@ def fetch(conn, get, problems: list[dict]) -> None:
 
 
 def link(conn, problems: list[dict]) -> dict:
-    """Match every cached video against every Performance and add the links not there yet; never touches a link's status."""
-    events: dict[int, Event] = {}
+    """Match every cached video against every Performance and add the links not there yet; never touches a link's status.
+
+    Runs on every Import, with or without a YouTube fetch: a row past CACHE_DAYS leaves the cache first (its links stay).
+    """
+    conn.execute("delete from youtube_videos where refreshed_at < now() - make_interval(days => %s)", [CACHE_DAYS])
+    competitions: dict[int, Competition] = {}
     segments: dict[int, Segment] = {}
-    for row in conn.execute(
+    for (competition_id, path, name, city, start, end, segment_id, discipline, level, segment_type,
+         performance_id, entry_name, nation, start_number) in conn.execute(
             """select c.id, k.value, c.name, c.city, c.start_date, c.end_date, s.id, s.discipline, s.level, s.segment_type,
                       p.id, p.name, p.nation, p.start_number
                from performances p join segments s on s.id = p.segment_id join competitions c on c.id = s.competition_id
                join keys k on k.system = 'isu-event' and k.entity = 'competition' and k.entity_id = c.id
                where not p.gone order by p.id"""):
-        event = events.setdefault(row[0], Event(row[1].rsplit("/", 1)[-1], *row[2:6], []))
-        if row[6] not in segments:
-            segments[row[6]] = Segment(*row[7:10], [])
-            event.segments.append(segments[row[6]])
-        segments[row[6]].entries.append(Entry(*row[10:]))
+        competition = competitions.get(competition_id)
+        if not competition:
+            competition = competitions[competition_id] = Competition(path.rsplit("/", 1)[-1], name, city, start, end, [])
+        if segment_id not in segments:
+            segments[segment_id] = Segment(discipline, level, segment_type, [])
+            competition.segments.append(segments[segment_id])
+        segments[segment_id].entries.append(Entry(performance_id, entry_name, nation, start_number))
     pairs = []
     videos = conn.execute("select youtube_id, title, channel_id, published_at, duration_seconds from youtube_videos order by youtube_id")
     for video in [Video(*row) for row in videos]:
-        ids, reason = match(video, list(events.values()))
+        if not (found := match(video, list(competitions.values()))):
+            continue
+        ids, reason = found
         if reason:
             # The title stays out: it is API data, and problems outlive the 30-day cache.
             problems.append({"step": "youtube", "kind": NO_MATCH, "key": video.youtube_id,
@@ -143,7 +152,6 @@ def link(conn, problems: list[dict]) -> dict:
 
 
 def cache_row(item: dict) -> dict:
-    """A youtube_videos row from one videos.list item."""
     region = item["contentDetails"].get("regionRestriction", {})
     return {"youtube_id": item["id"], "title": item["snippet"]["title"], "channel_id": item["snippet"]["channelId"],
             "published_at": dt.datetime.fromisoformat(item["snippet"]["publishedAt"]),
@@ -158,7 +166,6 @@ def seconds(duration: str) -> int:
     return ((int(d or 0) * 24 + int(h or 0)) * 60 + int(m or 0)) * 60 + int(s or 0)
 
 
-# ---------- matching ----------
 FOLD = str.maketrans({"ł": "l", "Ł": "L", "ø": "o", "Ø": "O", "đ": "d", "ß": "ss", "æ": "ae", "’": "'"})
 
 
@@ -183,7 +190,7 @@ SAME_TYPE = {"short dance": "rhythm dance"}
 DANCE_TYPE = {"free skating": "free dance", "short program": "rhythm dance"}
 GENERIC = set("skate isu figure skating championships championship world junior grand prix final international trophy cup "
               "of the gp jgp".split())
-# One alias list per event type (ISU code prefix), not per event; Junior Grand Prix events are named by their city.
+# One alias list per event type (ISU code prefix), not per Competition; Junior Grand Prix events are named by their city.
 TYPE_ALIASES = {
     "wc": ["world championships", "world champs", "world figure skating", "worldfigure", "worlds"],
     "wjc": ["junior world", "world junior", "worldjfigure", "jr worlds", "junior worlds"],
@@ -195,29 +202,34 @@ TYPE_ALIASES = {
 }
 
 
-def classify(t: str, table) -> str | None:
-    return next((value for value, rx in table if re.search(rx, t)), None)
+def classify(title: str, table) -> str | None:
+    return next((value for value, rx in table if re.search(rx, title)), None)
 
 
-def names_event(t: str, event: Event) -> bool:
-    """The title names the event by its type's alias, or by a word of its city or name."""
-    if any(re.search(rf"\b{a}\b", t) for a in TYPE_ALIASES.get(re.sub(r"\d+$", "", event.code), [])):
+def names_competition(title: str, competition: Competition) -> bool:
+    """The title names the Competition by its type's alias, or by a word of its city or name."""
+    if any(re.search(rf"\b{a}\b", title) for a in TYPE_ALIASES.get(re.sub(r"\d+$", "", competition.code), [])):
         return True
-    return not event_words(event.city, event.name).isdisjoint(t.split())
+    return not competition_words(competition.city, competition.name).isdisjoint(title.split())
 
 
-@functools.cache  # every video asks of every event
-def event_words(city: str, name: str) -> frozenset[str]:
+@functools.cache  # every video asks of every Competition
+def competition_words(city: str, name: str) -> frozenset[str]:
     return frozenset(w for w in norm(f"{city} {name}").split() if len(w) > 3 and w not in GENERIC and not w.isdigit())
 
 
+def printed_surname(word: str) -> bool:
+    """ISU prints surnames in capitals; 2+ capitals also catches McBEATH and O'SHEA."""
+    return sum(c.isupper() for c in word) >= 2
+
+
 def surnames(name: str) -> list[list[str]]:
-    """Per Skater, the words ISU prints in capitals (2+ capitals: McBEATH, O'SHEA)."""
-    return [[x for w in part.split() if sum(c.isupper() for c in w) >= 2 for x in norm(w).split()] for part in name.split("/")]
+    """Per Skater, the surname words."""
+    return [[x for w in part.split() if printed_surname(w) for x in norm(w).split()] for part in name.split("/")]
 
 
 def givens(name: str) -> list[str]:
-    return [norm(w) for part in name.split("/") for w in part.split() if sum(c.isupper() for c in w) < 2]
+    return [norm(w) for part in name.split("/") for w in part.split() if not printed_surname(w)]
 
 
 def close(a: str, b: str) -> bool:
@@ -228,52 +240,55 @@ def close(a: str, b: str) -> bool:
     return a[i + 1:] == b[i + 1:] or a[i:] == b[i + 1:] or a[i + 1:] == b[i:]
 
 
-def match(video: Video, events: list[Event]) -> tuple[list, str | None]:
-    """(Performance IDs, None) to link; (candidate Performance IDs, reason) to log; ([], None) when not ours."""
-    t = norm(video.title)
+def match(video: Video, competitions: list[Competition]) -> tuple[list, str | None] | None:
+    """(Performance IDs, None) to link, (candidate Performance IDs, reason) to log, or None when the video is not ours."""
+    title = norm(video.title)
     stream = video.duration_seconds > STREAM_SECONDS
     if re.search(SKIP + (STREAM_SKIP if stream else ""), video.title, re.I) or video.duration_seconds < CLIP_SECONDS:
-        return [], None
-    discipline, segment_type = classify(t, DISCIPLINES), classify(t, SEGMENT_TYPES)
-    if not discipline:
-        return [], None
-    if discipline == "ice dance":
-        segment_type = DANCE_TYPE.get(segment_type, segment_type)
+        return None
+    discipline, segment_type = classify(title, DISCIPLINES), classify(title, SEGMENT_TYPES)
     # Junior is known from the channel or the title (#JGPFigure since the junior channel stopped in 2023);
     # a stream not marked junior on the main channel is senior.
-    level = "junior" if video.channel_id == JGP or re.search(r"\bjunior\b|\bjr\b|\bjgp", t) else "senior" if stream else None
+    level = "junior" if video.channel_id == JGP or re.search(r"\bjunior\b|\bjr\b|\bjgp", title) else "senior" if stream else None
 
-    # The event the title names comes first; the publishedAt window only narrows a title without a year.
-    years = {int(y) for y in re.findall(r"\b(?:19|20)\d\d\b", t)}
+    # The Competition the title names comes first; the publishedAt window only narrows a title without a year.
+    years = {int(y) for y in re.findall(r"\b(?:19|20)\d\d\b", title)}
     published = video.published_at.date()
-    in_window = lambda e: e.start - dt.timedelta(days=2) <= published <= e.end + dt.timedelta(days=10)
-    named = [e for e in events if names_event(t, e)]
-    # Only when the title names no event: the window alone, and a match found that way is logged, not linked.
+    in_window = lambda c: c.start - dt.timedelta(days=2) <= published <= c.end + dt.timedelta(days=10)
+    named = [c for c in competitions if names_competition(title, c)]
+    # Only when the title names no Competition: the window alone, and a match found that way is logged, not linked.
     verified = bool(named)
-    candidates = ([e for e in named if (years & {e.start.year, e.end.year} if years else in_window(e))] if verified
-                  else [e for e in events if in_window(e)])
+    candidates = ([c for c in named if (years & {c.start.year, c.end.year} if years else in_window(c))] if verified
+                  else [c for c in competitions if in_window(c)])
     if not candidates:
-        return [], None  # names no loaded event
+        return None  # names no loaded Competition
 
-    segments = [s for e in candidates for s in e.segments if s.discipline == discipline
-                and (not segment_type or SAME_TYPE.get(s.segment_type, s.segment_type) == segment_type)
+    # No Discipline word: the surnames alone pick the entry, across every Discipline.
+    segments = [s for c in candidates for s in c.segments if (not discipline or s.discipline == discipline)
+                and (not segment_type or SAME_TYPE.get(s.segment_type, s.segment_type) == dance_type(s, segment_type))
                 and (not level or s.level == level)]
-    ids, reason = (stream_match if stream else clip_match)(t, segment_type, segments)
+    ids, reason = (stream_match if stream else clip_match)(title, segment_type, segments)
     if not verified:
-        return (ids, "matched by the publishedAt window only") if ids and not reason else ([], None)
+        return (ids, "matched by the publishedAt window only") if ids and not reason else None
     return ids, reason
 
 
-def clip_match(t: str, segment_type: str | None, segments: list[Segment]) -> tuple[list, str | None]:
+def dance_type(segment: Segment, segment_type: str) -> str:
+    """In ice dance, "Free" is the Free Dance and "Short" the Rhythm Dance."""
+    return DANCE_TYPE.get(segment_type, segment_type) if segment.discipline == "ice dance" else segment_type
+
+
+def clip_match(title: str, segment_type: str | None, segments: list[Segment]) -> tuple[list, str | None]:
     if not segment_type:
         return [], "no Segment type in the title"
-    words = set(t.split())
+    words = set(title.split())
     hits = []
     for fuzzy in (False, True):
         for s in segments:
             for e in s.entries:
-                sn = surnames(e.name)
-                if all(p and all(w in words or (fuzzy and len(w) > 4 and any(close(w, x) for x in words)) for w in p) for p in sn):
+                # Fuzzy only past 4 letters: LI, LEE or KIM are one edit from too many title words.
+                if all(p and all(w in words or (fuzzy and len(w) > 4 and any(close(w, x) for x in words)) for w in p)
+                       for p in surnames(e.name)):
                     hits.append((sum(g in words for g in givens(e.name)) + (e.nation.lower() in words), e.performance_id))
         if hits:
             break
@@ -284,16 +299,16 @@ def clip_match(t: str, segment_type: str | None, segments: list[Segment]) -> tup
     return (top, None) if len(top) == 1 else (top, "several entries match the title")
 
 
-def stream_match(t: str, segment_type: str | None, segments: list[Segment]) -> tuple[list, str | None]:
+def stream_match(title: str, segment_type: str | None, segments: list[Segment]) -> tuple[list, str | None]:
     """A full-segment stream: every Performance of its Segment, or of the "Skaters N–M" start numbers it shows."""
     if len(segments) != 1 or not segment_type:
         return [], "stream matches no single Segment"
     entries = segments[0].entries
-    if m := re.search(r"\bskaters? (\d+) (\d+)\b", t):
+    if m := re.search(r"\bskaters? (\d+) (\d+)\b", title):
         first, last = int(m[1]), int(m[2])
         entries = [e for e in entries if e.start_number and first <= e.start_number <= last]
         if not entries:
             return [], "no start number in the stream's range"
-    elif re.search(r"\bgroups?\b", t):
+    elif re.search(r"\bgroups?\b", title):
         return [], "group stream without a start-number range"
     return [e.performance_id for e in entries], None

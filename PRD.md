@@ -94,10 +94,10 @@ One Import pulls every data source in one job ([How does an Import run end to en
 Each Import links official clips to Performances after the ISU apply ([How does the Import match official ISU videos to Performances?][t17]). Measured 99% recall with no wrong links seen.
 
 1. Skip what isn't one Performance: other sports, highlights, interviews, galas, `LIVE`, `#Shorts`, "Winner(s)", and clips under ~100 s.
-2. **The title must name the event**: the event's city (from the ISU index) or a code-kept event-type alias (`wc` → "World Champs", `gpchn` → "Cup of China", …), with the year matching the event's start or end calendar year. Only a title without a year falls back to the `publishedAt` window (start − 2 days to end + 10 days). A match found by the window alone is logged, not linked.
+2. **The title must name the event**: a word of the event's city or name (from the ISU index) or a code-kept event-type alias (`wc` → "World Champs", `gpchn` → "Cup of China", …), with the year matching the event's start or end calendar year. Only a title without a year falls back to the `publishedAt` window (start − 2 days to end + 10 days). A match found by the window alone is logged, not linked.
 3. Pick the Segment from title words (junior channel = junior; Ladies = Women; Short Dance = Rhythm Dance; "Free" in dance = Free Dance).
 4. Pick the entry: every ISU surname of the entry appears in the title, diacritic-insensitive, one-edit fuzzy fallback; ties broken by given names and nation.
-5. Anything else, including titles with no Segment type, goes to `import_problems`.
+5. Anything else that names a loaded Competition, including titles with no Segment type, goes to `import_problems`; a title naming no loaded Competition is not ours and is not logged.
 6. **Full-segment streams** (over 30 min, not practice, ceremony or medals) link to every Performance of their Segment with an empty start time; a "Skaters N–M" stream links only that start-number range. Untimed streams play last.
 7. Titles are a transient signal: we store only the YouTube ID and our own link.
 

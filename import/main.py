@@ -64,8 +64,7 @@ def run(conn, import_id: int, events_file: pathlib.Path, cache_dir: pathlib.Path
                 pages = []  # logged by the apply phase
             for page in pages:
                 fetcher.get(*apply.page_urls(url, page))
-        if wikidata_endpoint:
-            wikidata_bodies = wikidata.fetch(fetcher, wikidata_endpoint, import_id)
+        wikidata_items = wikidata_endpoint and wikidata.fetch(fetcher, wikidata_endpoint, import_id, problems)
         problems += [{"step": "fetch", "kind": "fetch failed", "key": url, "detail": {"error": error}}
                      for url, error in fetcher.failures]
         if len(fetcher.failures) > MAX_FAILED_FETCHES * fetcher.fetches:
@@ -76,8 +75,8 @@ def run(conn, import_id: int, events_file: pathlib.Path, cache_dir: pathlib.Path
         with conn.transaction():
             conn.execute(IMPORT_LOCK)
             counts = apply.Apply(conn, problems).run(urls, lambda url: fetch.read_cached(cache_dir, url))
-            if wikidata_endpoint:
-                counts |= wikidata.run(conn, wikidata_bodies, problems)
+            if wikidata_items:
+                counts |= wikidata.apply(conn, wikidata_items, problems)
             counts |= youtube.link(conn, problems)  # after the ISU apply: links only to Performances that exist
             finish(conn, import_id, "succeeded", problems, counts=counts)
     except Exception as e:

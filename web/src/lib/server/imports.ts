@@ -12,12 +12,15 @@ export async function queueImport(db: Kysely<DB>) {
 	});
 }
 
-/** When the oldest YouTube cache row was refreshed, if over 25 days ago (the API terms allow 30), else null. */
+// The Import's youtube.REFRESH_DAYS: it refreshes rows older than that, and the API terms allow 30.
+const YOUTUBE_REFRESH_DAYS = 25;
+
+/** When the oldest YouTube cache row was refreshed, if over YOUTUBE_REFRESH_DAYS ago, else null. */
 export async function youtubeCacheStaleSince(db: Kysely<DB>) {
 	const row = await db
 		.selectFrom('youtube_videos')
 		.select((eb) => eb.fn.min('refreshed_at').as('oldest'))
-		.where('refreshed_at', '<', sql<Date>`now() - interval '25 days'`)
+		.where('refreshed_at', '<', sql<Date>`now() - make_interval(days => ${YOUTUBE_REFRESH_DAYS})`)
 		.executeTakeFirst();
 	return row?.oldest ?? null;
 }

@@ -34,32 +34,42 @@ class Item:
     ru: str | None
 
 
-def fetch(fetcher, endpoint: str, import_id: int) -> list[bytes | None]:
-    """One body per query. An answer that does not parse (a timed-out query still answers HTTP 200, and Wikidata's
+def fetch(fetcher, endpoint: str, import_id: int, problems: list[dict]) -> list[Item] | None:
+    """Every query's answer merged into Items, or None when one is missing: applying the others alone would delete the
+    aliases or titles it holds. An answer that does not parse (a timed-out query still answers HTTP 200, and Wikidata's
     cache serves it again) is asked once more under a URL the cache has not seen."""
-    bodies = []
+    answers = []
     for query in QUERIES:
-        body = fetcher.get(url(endpoint, query), timeout=60)  # the endpoint gives up at 60 s
-        try:
-            parse([body])
-        except Exception:
-            if body is not None:  # None: every try failed, and the fetcher logged it
-                body = fetcher.get(url(endpoint, f"# import {import_id}\n{query}"), timeout=60)
-        bodies.append(body)
-    return bodies
+        for attempt in (query, f"# import {import_id}\n{query}"):
+            body = fetcher.get(url(endpoint, attempt), timeout=60)  # the endpoint gives up at 60 s
+            if body is None:
+                return None  # every try failed, and the fetcher logged it
+            try:
+                answers.append(bindings(body))
+                break
+            except Exception as e:
+                error = e
+        else:
+            problems.append({"step": "wikidata", "kind": "parse failed", "key": ENDPOINT, "detail": {"error": str(error)}})
+            return None
+    return parse(answers)
 
 
 def url(endpoint: str, query: str) -> str:
     return endpoint + "?" + urlencode({"query": query, "format": "json"})
 
 
-def parse(bodies: list[bytes]) -> list[Item]:
+def bindings(body: bytes) -> list[dict]:
+    rows = json.loads(body)["results"]["bindings"]
+    if not rows:  # an empty answer would delete every alias in `apply`
+        raise ValueError("no items")
+    return rows
+
+
+def parse(answers: list[list[dict]]) -> list[Item]:
     """One Item per QID across the queries' answers: an item can carry several ISU IDs (one per partner)."""
     items: dict[str, Item] = {}
-    for body in bodies:
-        rows = json.loads(body)["results"]["bindings"]
-        if not rows:  # an empty answer would delete every alias below
-            raise ValueError("no items")
+    for rows in answers:
         for row in rows:
             value = {name: binding["value"] for name, binding in row.items()}
             qid = value.pop("item").rsplit("/", 1)[-1]
@@ -67,20 +77,8 @@ def parse(bodies: list[bytes]) -> list[Item]:
             if (isu := value.pop("isu", None)) and isu not in item.isu_ids:
                 item.isu_ids.append(isu)
             for name, label in value.items():
-                setattr(item, name, label)
+                setattr(item, name, label)  # the queries name their variables after Item's fields
     return list(items.values())
-
-
-def run(conn, bodies: list[bytes | None], problems: list[dict]) -> dict:
-    """Applies every query's answer or none: one missing would delete the aliases or titles it holds."""
-    if None in bodies:
-        return {}  # never fetched: the fetch phase logged it
-    try:
-        items = parse(bodies)
-    except Exception as e:
-        problems.append({"step": "wikidata", "kind": "parse failed", "key": ENDPOINT, "detail": {"error": str(e)}})
-        return {}
-    return apply(conn, items, problems)
 
 
 def apply(conn, items: list[Item], problems: list[dict]) -> dict:
