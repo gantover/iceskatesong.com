@@ -97,6 +97,15 @@ export interface Performances {
   tss: Numeric | null;
 }
 
+export interface PerformanceVideos {
+  id: Generated<Int8>;
+  origin: string;
+  performance_id: Int8;
+  start_seconds: number | null;
+  status: Generated<string>;
+  youtube_id: string;
+}
+
 export interface Programs {
   id: Generated<Int8>;
   season: number;
@@ -129,6 +138,19 @@ export interface Teams {
   skater2_id: Int8;
 }
 
+export interface YoutubeVideos {
+  allowed_regions: string[] | null;
+  blocked_regions: Generated<string[]>;
+  channel_id: string;
+  duration_seconds: number;
+  embeddable: boolean;
+  made_for_kids: boolean;
+  published_at: Timestamp;
+  refreshed_at: Timestamp;
+  title: string;
+  youtube_id: string;
+}
+
 export interface DB {
   competitions: Competitions;
   fetched_pages: FetchedPages;
@@ -136,9 +158,11 @@ export interface DB {
   imports: Imports;
   keys: Keys;
   names: Names;
+  performance_videos: PerformanceVideos;
   performances: Performances;
   programs: Programs;
   segments: Segments;
   skaters: Skaters;
   teams: Teams;
+  youtube_videos: YoutubeVideos;
 }

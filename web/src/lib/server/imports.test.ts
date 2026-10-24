@@ -1,7 +1,7 @@
 import { sql } from 'kysely';
 import { afterAll, beforeEach, expect, inject, test } from 'vitest';
 import { createDb } from './db.js';
-import { importStatus, queueImport } from './imports.js';
+import { importStatus, queueImport, youtubeCacheStaleSince } from './imports.js';
 
 const db = createDb(inject('databaseUrl'));
 afterAll(() => db.destroy());
@@ -62,4 +62,26 @@ test('status shows the current and last Import, and the last one\'s problems gro
 
 test('status with no Imports yet', async () => {
 	expect(await importStatus(db)).toEqual({ current: undefined, last: undefined, problems: [] });
+});
+
+test('the YouTube cache is stale when its oldest row is older than 25 days', async () => {
+	await db.deleteFrom('youtube_videos').execute();
+	expect(await youtubeCacheStaleSince(db)).toBeNull();
+
+	const row = (youtube_id: string, days: number) => ({
+		youtube_id,
+		title: 't',
+		channel_id: 'c',
+		published_at: new Date(),
+		duration_seconds: 300,
+		embeddable: true,
+		made_for_kids: false,
+		refreshed_at: new Date(Date.now() - days * 86_400_000)
+	});
+	await db.insertInto('youtube_videos').values([row('a', 1), row('b', 24)]).execute();
+	expect(await youtubeCacheStaleSince(db)).toBeNull();
+
+	await db.insertInto('youtube_videos').values(row('c', 26)).execute();
+	const since = await youtubeCacheStaleSince(db);
+	expect(Math.round((Date.now() - since!.getTime()) / 86_400_000)).toBe(26);
 });

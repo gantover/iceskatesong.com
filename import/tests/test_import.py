@@ -10,14 +10,15 @@ RHYTHM_DANCE = "results/season2526/gpf2025/SEG007.htm"
 DOMAIN_TABLES = ["competitions", "segments", "skaters", "teams", "programs", "performances", "keys", "names"]
 
 
-def run_import(conn, site, tmp_path, events=(GPF,), wikidata=False):
+def run_import(conn, site, tmp_path, events=(GPF,), wikidata=False, youtube_api=None):
     events_file = tmp_path / "events.txt"
     events_file.write_text("# test list\n\n" + "".join(f"{site.url}/{e}\n" for e in events))
     conn.execute("insert into imports default values")
     import_id = main.claim(conn)
     site.log.clear()
     endpoint = f"{site.url}/wikidata/sparql" if wikidata else None  # answers every query with the combined fixture
-    main.run(conn, import_id, events_file, tmp_path / "cache", "test@example.com", interval=0, wikidata_endpoint=endpoint)
+    main.run(conn, import_id, events_file, tmp_path / "cache", "test@example.com", interval=0, wikidata_endpoint=endpoint,
+             youtube_api=youtube_api)
     return conn.execute("select status, counts, error from imports where id = %s", [import_id]).fetchone()
 
 

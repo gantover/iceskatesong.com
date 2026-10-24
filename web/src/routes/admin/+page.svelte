@@ -82,6 +82,13 @@
 		</form>
 	</div>
 
+	{#if data.youtubeStaleSince}
+		<p role="alert" class="border-destructive text-destructive rounded-lg border p-4 text-sm">
+			The YouTube cache has rows last refreshed {time(data.youtubeStaleSince)}, over 25 days ago. The API
+			terms allow 30: run an Import (it needs <code>YOUTUBE_API_KEY</code>).
+		</p>
+	{/if}
+
 	{@render importCard('Current Import', data.current)}
 	{@render importCard('Last Import', data.last)}
 
