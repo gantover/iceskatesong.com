@@ -62,6 +62,9 @@ class Fetcher:
                 if e.code == 404 and alternatives:
                     self.fetches -= 1  # one page: count it once in the failure ratio
                     return self.get(*alternatives, timeout=timeout)
+                if e.code == 429:  # rate limited for minutes (Wikidata says 120 s): asking again now only prolongs it
+                    self.failures.append((url, "HTTP 429"))
+                    return read_cached(self.cache_dir, url)
                 error = f"HTTP {e.code}"
             except (OSError, http.client.HTTPException) as e:  # URLError, timeouts, resets, truncated bodies
                 error = repr(e)

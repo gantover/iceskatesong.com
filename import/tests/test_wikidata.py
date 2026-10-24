@@ -5,6 +5,7 @@ from urllib.parse import parse_qs, urlsplit
 
 import pytest
 
+import fetch
 import main
 import wikidata
 
@@ -24,6 +25,9 @@ class Sparql(http.server.BaseHTTPRequestHandler):
         query = parse_qs(urlsplit(self.path).query)["query"][0]
         self.server.log.append(query)
         body = self.server.answer(query)
+        if isinstance(body, int):
+            self.send_error(body)
+            return
         self.send_response(200)
         self.send_header("Content-Type", "application/sparql-results+json")
         self.end_headers()
@@ -35,7 +39,8 @@ class Sparql(http.server.BaseHTTPRequestHandler):
 
 @pytest.fixture
 def endpoint():
-    """A SPARQL endpoint answering each query with `answer(query)`, by default the fixture. `log` of queries."""
+    """A SPARQL endpoint answering each query with `answer(query)` (a body or an HTTP error code), by default the fixture.
+    `log` of queries."""
     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Sparql)
     server.log, server.url, server.answer = [], f"http://127.0.0.1:{server.server_port}/sparql", lambda query: SPARQL
     threading.Thread(target=server.serve_forever, daemon=True).start()
@@ -213,3 +218,15 @@ def test_an_answer_timed_out_twice_is_a_problem_and_changes_nothing(conn, endpoi
     assert len(set(endpoint.log)) == 3  # the keys, the JA query twice; with the JA answer lost, no RU query
     assert search(conn, "羽生結弦") == [("skater", hanyu)]
     assert conn.execute("select count(*) from names where origin = 'wikidata'").fetchone() == (2,)
+
+
+def test_a_rate_limited_query_is_not_asked_again_and_the_last_answer_serves(conn, endpoint, tmp_path):
+    fetcher = fetch.Fetcher(conn, tmp_path, "test", interval=0)
+    query_url = wikidata.url(endpoint.url, wikidata.QUERIES[0])
+    fetcher.get(query_url)
+    endpoint.answer = lambda query: 429
+
+    assert fetcher.get(query_url) == SPARQL
+
+    assert len(endpoint.log) == 2
+    assert fetcher.failures == [(query_url, "HTTP 429")]
