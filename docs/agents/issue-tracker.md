@@ -44,3 +44,7 @@ Used by `/wayfinder`. The **map** is a single issue with **child** issues as tic
 - **Frontier query**: list the map's open children (`gh issue list --state open`, scoped to the map's sub-issues / task list), drop any with an open blocker (`issue_dependencies_summary.blocked_by > 0`, or an open issue in the `Blocked by` line) or an assignee; first in map order wins.
 - **Claim**: `gh issue edit <n> --add-assignee @me`, the session's first write.
 - **Resolve**: `gh issue comment <n> --body "<answer>"`, then `gh issue close <n>`, then append a context pointer (gist + link) to the map's Decisions-so-far.
+
+## Taking the next issue
+
+The map (#1) is closed. Work lives in the children of R1 (#25), R2 (#42) and R3 (#51), which carry `ready-for-agent`/`ready-for-human` and native blocked-by edges. "Take the next issue" means: run the **Frontier query** over those children, prefer one touching few shared files (parallel sessions run), **Claim** it, and work it with `/implement #<n>`. `/wayfinder` is for `wayfinder:*` tickets only.

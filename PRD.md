@@ -26,6 +26,7 @@ This PRD is the build-ready spec. Every decision in it was made on the [wayfinde
 **Out of scope**
 - Hosting or downloading video files. YouTube embeds only.
 - Non-ISU competitions.
+- The ISU Challenger Series and other ISU events whose results live on organiser sites (~20 sites, one parser each, for marginal data). Adding them means amending ADR 0001 and writing per-host parsers.
 - Individual recordings. Arrangement is the finest music grain.
 - Translating the UI (the data is multilingual-ready).
 - User accounts and moderator roles.
@@ -211,6 +212,7 @@ A visitor pastes any YouTube URL plus hints; the site finds the Performance itse
 
 ([Where does it run: hosting, database and deployment?][t11], [Which web framework runs the public site and the Admin panel?][t18], [What do the hosting options cost, and how do they scale?][t6])
 
+- **Choosing a tool**: the mainstream option unless there's a concrete reason; a proposal cites weekly downloads, GitHub stars and age.
 - **Repo layout**: `compose.yml`, `web/`, `import/`, `db/`, `backup/`, `scripts/` at the root.
 - **Host**: the owner's Radxa Rock 5 ITX (ARM64, 24 GB) behind the existing Cloudflare Tunnel; Docker volumes on NVMe/SATA. Secrets in `.env` on the box, never in git.
 - **Compose services**: `migrate` (one-shot), `web`, `import`, `postgres`, `backup`, `cloudflared`. `web` and `import` start only after `migrate` succeeds.
