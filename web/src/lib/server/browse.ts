@@ -1,4 +1,3 @@
-import { error } from '@sveltejs/kit';
 import { sql, type Kysely, type RawBuilder } from 'kysely';
 import type { DB } from './db-types.js';
 
@@ -76,7 +75,7 @@ const SEGMENT_ORDER = sql.lit(
 const slugOf = (entity: 'skater' | 'team', id: string) =>
 	sql<string>`(select min(value) from keys k where k.system = 'slug' and k.entity = ${entity} and k.entity_id = ${sql.ref(id)})`;
 
-async function bySlug(db: Kysely<DB>, entity: 'skater' | 'team', slug: string) {
+async function idBySlug(db: Kysely<DB>, entity: 'skater' | 'team', slug: string) {
 	const row = await db
 		.selectFrom('keys')
 		.select('entity_id')
@@ -128,7 +127,7 @@ async function performanceRows(db: Kysely<DB>, where: RawBuilder<boolean>) {
 
 /** A Skater and their Performances, their Teams' included; undefined for an unknown slug. */
 export async function skaterPage(db: Kysely<DB>, slug: string) {
-	const id = await bySlug(db, 'skater', slug);
+	const id = await idBySlug(db, 'skater', slug);
 	if (!id) return undefined;
 	const skater = await db
 		.selectFrom('skaters')
@@ -144,7 +143,7 @@ export async function skaterPage(db: Kysely<DB>, slug: string) {
 
 /** A Team, its two Skaters and its Performances; undefined for an unknown slug. */
 export async function teamPage(db: Kysely<DB>, slug: string) {
-	const id = await bySlug(db, 'team', slug);
+	const id = await idBySlug(db, 'team', slug);
 	if (!id) return undefined;
 	const team = await db
 		.selectFrom('teams')
@@ -206,10 +205,10 @@ export async function performancePage(db: Kysely<DB>, id: string, country: strin
 	return { performance, videos: playOrder(videos, country), sameProgram };
 }
 
-/** The Season tabs of a career, newest first, and the rows of the one in the URL (else the newest). */
+/** The Season tabs of a career, newest first, and the rows of the one in the URL (else the newest); undefined for a Season not in it. */
 export function pickSeason(rows: PerformanceRow[], param: string | undefined) {
 	const seasons = [...new Set(rows.map((r) => r.season))];
 	const season = param === undefined ? seasons[0] : Number(param);
-	if (param !== undefined && !seasons.includes(season)) error(404);
+	if (param !== undefined && !seasons.includes(season)) return undefined;
 	return { seasons, season, performances: rows.filter((r) => r.season === season) };
 }

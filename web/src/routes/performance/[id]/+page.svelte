@@ -1,6 +1,6 @@
 <script lang="ts">
 	import VideoSlot from '#lib/components/VideoSlot.svelte';
-	import { dates, seasonName, segmentName } from '#lib/format.js';
+	import { dateRange, seasonName, segmentName } from '#lib/format.js';
 
 	let { data } = $props();
 	const p = $derived(data.performance);
@@ -42,7 +42,7 @@
 						{/if}
 					</dl>
 				{/if}
-				<p class="text-muted-foreground mt-2 text-sm">{p.city} · {dates(p.start_date, p.end_date)}</p>
+				<p class="text-muted-foreground mt-2 text-sm">{p.city} · {dateRange(p.start_date, p.end_date)}</p>
 				<a href={p.url} target="_blank" rel="noopener noreferrer" class="text-primary mt-1 inline-block text-sm hover:underline"
 					>ISU result page ↗</a
 				>

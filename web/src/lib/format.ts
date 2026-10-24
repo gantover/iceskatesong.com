@@ -8,8 +8,8 @@ export const segmentName = (p: { discipline: string; level: string; segment_type
 	capitalize([p.level === 'junior' ? 'junior' : '', p.discipline, p.segment_type].filter(Boolean).join(' ')) +
 	(p.round ? `, ${p.round}` : '');
 
-/** "4–7 Dec 2025": a Competition's dates, given as yyyy-mm-dd. */
-export function dates(start: string, end: string) {
+/** "4–7 Dec 2025": a Competition's dateRange, given as yyyy-mm-dd. */
+export function dateRange(start: string, end: string) {
 	const day = (d: string, options: Intl.DateTimeFormatOptions) =>
 		new Date(`${d}T00:00:00Z`).toLocaleDateString('en-GB', { timeZone: 'UTC', ...options });
 	return start === end ? day(end, { dateStyle: 'medium' }) : `${day(start, { day: 'numeric' })}–${day(end, { dateStyle: 'medium' })}`;

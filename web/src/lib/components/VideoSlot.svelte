@@ -29,7 +29,7 @@
 {#if !videos.length}
 	{@render empty('No video yet', 'Know a YouTube video of this Performance? Submitting one comes soon.')}
 {:else if !current}
-	{@render empty('Not available in your country', 'YouTube blocks every video of this Performance here.')}
+	{@render empty('Not available in your country', "YouTube doesn't let any video of this Performance play here.")}
 {:else if loaded}
 	<iframe
 		class="aspect-video w-full rounded-lg"
@@ -50,7 +50,7 @@
 		</svg>
 		<span class="text-sm">{current.title ?? 'Play on YouTube'}</span>
 		{#if current.start_seconds === null}
-			<span class="text-xs text-neutral-400">Untimed full-segment stream: find the Skater in it yourself.</span>
+			<span class="text-xs text-neutral-400">Untimed full-segment stream: find this Performance in it yourself.</span>
 		{/if}
 		<span class="max-w-md text-xs text-neutral-400">
 			Plays from YouTube (youtube-nocookie.com). Nothing loads until you click; YouTube may then set cookies.

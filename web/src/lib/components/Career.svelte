@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { PerformanceRow } from '#lib/server/browse.js';
-	import { dates, seasonName, segmentName } from '#lib/format.js';
+	import { dateRange, seasonName, segmentName } from '#lib/format.js';
 	import { cn } from '#lib/utils.js';
 
 	/** Season tabs linking to `{base}/{season}`, and the chosen Season's Competitions, one row per Segment. */
@@ -38,7 +38,7 @@
 	<section class="bg-card my-3 rounded-lg border">
 		<h2 class="flex flex-wrap justify-between gap-x-4 border-b px-4 py-2.5 font-medium">
 			<span>{rows[0].competition}</span>
-			<span class="text-muted-foreground text-sm font-normal">{rows[0].city} · {dates(rows[0].start_date, rows[0].end_date)}</span>
+			<span class="text-muted-foreground text-sm font-normal">{rows[0].city} · {dateRange(rows[0].start_date, rows[0].end_date)}</span>
 		</h2>
 		<ul class="divide-y">
 			{#each rows as p (p.id)}
