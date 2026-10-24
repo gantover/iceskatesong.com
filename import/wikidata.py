@@ -1,4 +1,4 @@
-"""Wikidata step: one SPARQL extract of every item with an ISU ID (P2694), applied as keys and JA/RU name aliases.
+"""Wikidata step: a SPARQL extract of every item with an ISU ID (P2694), applied as keys and JA/RU name aliases.
 
 Attaches only to Skaters and Teams the ISU results created (ADR 0001); items whose ISU IDs match nothing are ignored.
 """
@@ -9,16 +9,19 @@ import re
 import unicodedata
 from urllib.parse import urlencode
 
-# Without the optimizer hint Blazegraph scans the labels before the ISU-ID join: ~35 s instead of ~15 s.
-QUERY = """SELECT ?item ?isu ?en ?title ?ja ?ru WHERE {
+ENDPOINT = "https://query.wikidata.org/sparql"
+# Without the optimizer hint Blazegraph scans the labels before the ISU-ID join.
+# As one query this ran close to the endpoint's 60 s limit (#54). Split in three: keys ~6 s, each label query 6–37 s.
+QUERIES = ["""SELECT ?item ?isu ?en ?title WHERE {
   hint:Query hint:optimizer "None" .
   ?item wdt:P2694 ?isu .
   OPTIONAL { ?item rdfs:label ?en . FILTER(LANG(?en) = "en") }
   OPTIONAL { ?article schema:about ?item ; schema:isPartOf <https://en.wikipedia.org/> ; schema:name ?title . }
-  OPTIONAL { ?item rdfs:label ?ja . FILTER(LANG(?ja) = "ja") }
-  OPTIONAL { ?item rdfs:label ?ru . FILTER(LANG(?ru) = "ru") }
-}"""
-URL = "https://query.wikidata.org/sparql?" + urlencode({"query": QUERY, "format": "json"})
+}"""] + [f"""SELECT ?item ?{lang} WHERE {{
+  hint:Query hint:optimizer "None" .
+  ?item wdt:P2694 [] .
+  OPTIONAL {{ ?item rdfs:label ?{lang} . FILTER(LANG(?{lang}) = "{lang}") }}
+}}""" for lang in ("ja", "ru")]
 
 
 @dataclasses.dataclass
@@ -31,26 +34,51 @@ class Item:
     ru: str | None
 
 
-def parse(body: bytes) -> list[Item]:
-    """One Item per QID: an item can carry several ISU IDs (one per partner)."""
+def fetch(fetcher, endpoint: str, import_id: int) -> list[bytes | None]:
+    """One body per query. An answer that does not parse (a timed-out query still answers HTTP 200, and Wikidata's
+    cache serves it again) is asked once more under a URL the cache has not seen."""
+    bodies = []
+    for query in QUERIES:
+        body = fetcher.get(url(endpoint, query), timeout=60)  # the endpoint gives up at 60 s
+        try:
+            parse([body])
+        except Exception:
+            if body is not None:  # None: every try failed, and the fetcher logged it
+                body = fetcher.get(url(endpoint, f"# import {import_id}\n{query}"), timeout=60)
+        bodies.append(body)
+    return bodies
+
+
+def url(endpoint: str, query: str) -> str:
+    return endpoint + "?" + urlencode({"query": query, "format": "json"})
+
+
+def parse(bodies: list[bytes]) -> list[Item]:
+    """One Item per QID across the queries' answers: an item can carry several ISU IDs (one per partner)."""
     items: dict[str, Item] = {}
-    for row in json.loads(body)["results"]["bindings"]:
-        value = {name: binding["value"] for name, binding in row.items()}
-        qid = value["item"].rsplit("/", 1)[-1]
-        item = items.setdefault(qid, Item(qid, [], value.get("en"), value.get("title"), value.get("ja"), value.get("ru")))
-        item.isu_ids.append(value["isu"])
-    if not items:  # an empty answer would delete every alias below
-        raise ValueError("no items")
+    for body in bodies:
+        rows = json.loads(body)["results"]["bindings"]
+        if not rows:  # an empty answer would delete every alias below
+            raise ValueError("no items")
+        for row in rows:
+            value = {name: binding["value"] for name, binding in row.items()}
+            qid = value.pop("item").rsplit("/", 1)[-1]
+            item = items.setdefault(qid, Item(qid, [], None, None, None, None))
+            if (isu := value.pop("isu", None)) and isu not in item.isu_ids:
+                item.isu_ids.append(isu)
+            for name, label in value.items():
+                setattr(item, name, label)
     return list(items.values())
 
 
-def run(conn, body: bytes | None, problems: list[dict]) -> dict:
-    if body is None:
+def run(conn, bodies: list[bytes | None], problems: list[dict]) -> dict:
+    """Applies every query's answer or none: one missing would delete the aliases or titles it holds."""
+    if None in bodies:
         return {}  # never fetched: the fetch phase logged it
     try:
-        items = parse(body)
+        items = parse(bodies)
     except Exception as e:
-        problems.append({"step": "wikidata", "kind": "parse failed", "key": URL.split("?")[0], "detail": {"error": str(e)}})
+        problems.append({"step": "wikidata", "kind": "parse failed", "key": ENDPOINT, "detail": {"error": str(e)}})
         return {}
     return apply(conn, items, problems)
 

@@ -1,8 +1,54 @@
+import http.server
 import pathlib
+import threading
+from urllib.parse import parse_qs, urlsplit
 
+import pytest
+
+import main
 import wikidata
 
 SPARQL = (pathlib.Path(__file__).parent / "pages/wikidata/sparql").read_bytes()  # trimmed from a real query result
+# What Wikidata answered once a query hit its 60 s limit, and its cache then served again: HTTP 200, cut off mid-JSON.
+TIMED_OUT = SPARQL[:len(SPARQL) // 2] + b"""
+SPARQL-QUERY: queryStr=SELECT ...
+java.util.concurrent.TimeoutException
+\tat java.util.concurrent.FutureTask.get(FutureTask.java:205)
+\tat com.bigdata.rdf.sail.webapp.BigdataServlet.submitApiTask(BigdataServlet.java:292)
+"""
+
+
+class Sparql(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        query = parse_qs(urlsplit(self.path).query)["query"][0]
+        self.server.log.append(query)
+        body = TIMED_OUT if self.server.times_out(query) else SPARQL
+        self.send_response(200)
+        self.send_header("Content-Type", "application/sparql-results+json")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, format, *args):
+        pass
+
+
+@pytest.fixture
+def endpoint():
+    """A SPARQL endpoint answering every query with the fixture, or TIMED_OUT where `times_out(query)`. `log` of queries."""
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Sparql)
+    server.log, server.url = [], f"http://127.0.0.1:{server.server_port}/sparql"
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    yield server
+    server.shutdown()
+
+
+def run_import(conn, tmp_path, endpoint):
+    """An Import with no events: the Wikidata step only. Returns its problems' kinds."""
+    (tmp_path / "events.txt").write_text("")
+    conn.execute("insert into imports default values")
+    main.run(conn, main.claim(conn), tmp_path / "events.txt", tmp_path / "cache", "test@example.com", interval=0,
+             wikidata_endpoint=endpoint.url)
+    return [kind for (kind,) in conn.execute("select kind from import_problems order by id")]
 
 
 def skater(conn, name, nation, isu_id=None):
@@ -34,7 +80,7 @@ def test_japanese_and_russian_names_find_the_skater(conn):
     hanyu = skater(conn, "Yuzuru HANYU", "JPN", "00010967")
     plushenko = skater(conn, "Evgeni PLUSHENKO", "RUS", "00000124")
 
-    wikidata.run(conn, SPARQL, [])
+    wikidata.run(conn, [SPARQL], [])
 
     assert search(conn, "羽生結弦") == [("skater", hanyu)]
     assert search(conn, "Плющенко") == [("skater", plushenko)]
@@ -51,7 +97,7 @@ def test_a_team_id_on_each_partners_item_attaches_to_that_partner(conn):
     team(conn, "00009807", bazarova, larionov)
     team(conn, "00054476", bazarova, deputat)
 
-    wikidata.run(conn, SPARQL, [])
+    wikidata.run(conn, [SPARQL], [])
 
     assert search(conn, "メディソン・チョーク") == [("skater", chock)]
     assert search(conn, "Эван Бейтс") == [("skater", bates)]
@@ -63,7 +109,7 @@ def test_a_team_id_on_each_partners_item_attaches_to_that_partner(conn):
 def test_an_item_naming_both_partners_attaches_to_the_team(conn):
     davis_white = team(conn, "00006260", skater(conn, "Meryl DAVIS", "USA"), skater(conn, "Charlie WHITE", "USA"))
 
-    wikidata.run(conn, SPARQL, [])
+    wikidata.run(conn, [SPARQL], [])
 
     assert keys(conn, davis_white, "team") == [("enwiki", "Meryl Davis and Charlie White"), ("wikidata", "Q96592016")]
 
@@ -72,7 +118,7 @@ def test_a_team_id_item_naming_neither_partner_is_a_problem(conn):
     team(conn, "00013665", skater(conn, "Someone ELSE", "USA"), skater(conn, "Another PERSON", "USA"))
     problems = []
 
-    wikidata.run(conn, SPARQL, problems)
+    wikidata.run(conn, [SPARQL], problems)
 
     assert sorted(p["key"] for p in problems) == ["Q2470854", "Q457792"]  # Bates, Chock
     assert conn.execute("select count(*) from keys where system <> 'isu'").fetchone() == (0,)
@@ -83,7 +129,7 @@ def test_partners_sharing_only_a_surname_with_the_item_are_a_problem_not_the_tea
     chocks = team(conn, "00013665", skater(conn, "Madisen CHOCK", "USA"), skater(conn, "Ted CHOCK", "USA"))
     problems = []
 
-    wikidata.run(conn, SPARQL, problems)
+    wikidata.run(conn, [SPARQL], problems)
 
     assert sorted(p["key"] for p in problems) == ["Q2470854", "Q457792"]  # Bates, Chock
     assert keys(conn, chocks, "team") == []
@@ -95,7 +141,7 @@ def test_an_item_matching_several_skaters_is_a_problem(conn):
     skater(conn, "Vera BAZAROVA", "RUS", "00054476")
     problems = []
 
-    wikidata.run(conn, SPARQL, problems)
+    wikidata.run(conn, [SPARQL], problems)
 
     assert [(p["kind"], p["key"]) for p in problems] == [("Wikidata item matches several Skaters", "Q462429")]
     assert conn.execute("select count(*) from keys where value in ('Q462429', 'Vera Bazarova')").fetchone() == (0,)
@@ -105,7 +151,7 @@ def test_an_article_title_follows_its_item_to_another_record(conn):
     hanyu = skater(conn, "Yuzuru HANYU", "JPN", "00010967")
     conn.execute("insert into keys (system, value, entity, entity_id) values ('enwiki', 'Yuzuru Hanyu', 'skater', %s)", [hanyu + 1])
 
-    counts = wikidata.run(conn, SPARQL, [])
+    counts = wikidata.run(conn, [SPARQL], [])
 
     assert counts["key"] == {"created": 1, "updated": 1, "deleted": 0}  # the QID; the moved title
     assert keys(conn, hanyu) == [("enwiki", "Yuzuru Hanyu"), ("wikidata", "Q597023")]
@@ -113,10 +159,10 @@ def test_an_article_title_follows_its_item_to_another_record(conn):
 
 def test_a_changed_label_or_article_title_replaces_the_old_one(conn):
     hanyu = skater(conn, "Yuzuru HANYU", "JPN", "00010967")
-    wikidata.run(conn, SPARQL, [])
+    wikidata.run(conn, [SPARQL], [])
 
     changed = SPARQL.decode().replace("Юдзуру Ханю", "Юдзуру Ханю (фигурист)").replace('"Yuzuru Hanyu"', '"Yuzuru Hanyu (skater)"')
-    counts = wikidata.run(conn, changed.encode(), [])
+    counts = wikidata.run(conn, [changed.encode()], [])
 
     assert counts == {"key": {"created": 1, "updated": 0, "deleted": 1}, "name": {"created": 1, "updated": 0, "deleted": 1}}
     assert keys(conn, hanyu) == [("enwiki", "Yuzuru Hanyu (skater)"), ("wikidata", "Q597023")]
@@ -126,10 +172,10 @@ def test_a_changed_label_or_article_title_replaces_the_old_one(conn):
 
 def test_an_unparseable_answer_is_a_problem_and_changes_nothing(conn):
     skater(conn, "Yuzuru HANYU", "JPN", "00010967")
-    wikidata.run(conn, SPARQL, [])
+    wikidata.run(conn, [SPARQL], [])
     problems = []
 
-    assert wikidata.run(conn, b'{"results": {"bindings": []}}', problems) == {}
+    assert wikidata.run(conn, [b'{"results": {"bindings": []}}'], problems) == {}
 
     assert [p["kind"] for p in problems] == ["parse failed"]
     assert conn.execute("select count(*) from names where origin = 'wikidata'").fetchone() == (2,)
@@ -138,8 +184,31 @@ def test_an_unparseable_answer_is_a_problem_and_changes_nothing(conn):
 def test_items_whose_isu_ids_match_nothing_are_ignored(conn):
     problems = []
 
-    assert wikidata.run(conn, SPARQL, problems) == {}
+    assert wikidata.run(conn, [SPARQL], problems) == {}
 
     assert problems == []
     assert conn.execute("select count(*) from keys").fetchone() == (0,)
     assert conn.execute("select count(*) from names").fetchone() == (0,)
+
+
+def test_a_timed_out_answer_is_asked_again_under_a_url_the_cache_has_not_seen(conn, endpoint, tmp_path):
+    hanyu = skater(conn, "Yuzuru HANYU", "JPN", "00010967")
+    endpoint.times_out = lambda query: "# import" not in query
+
+    assert run_import(conn, tmp_path, endpoint) == []
+
+    assert len(endpoint.log) == len(set(endpoint.log)) == 2 * len(wikidata.QUERIES)
+    assert search(conn, "羽生結弦") == [("skater", hanyu)]
+    assert keys(conn, hanyu) == [("enwiki", "Yuzuru Hanyu"), ("wikidata", "Q597023")]
+
+
+def test_an_answer_timed_out_twice_is_a_problem_and_changes_nothing(conn, endpoint, tmp_path):
+    hanyu = skater(conn, "Yuzuru HANYU", "JPN", "00010967")
+    wikidata.run(conn, [SPARQL], [])
+    endpoint.times_out = lambda query: "?ja" in query  # the other queries answer: applying them alone would drop the JA names
+
+    assert run_import(conn, tmp_path, endpoint) == ["parse failed"]
+
+    assert len(set(endpoint.log)) == len(wikidata.QUERIES) + 1
+    assert search(conn, "羽生結弦") == [("skater", hanyu)]
+    assert conn.execute("select count(*) from names where origin = 'wikidata'").fetchone() == (2,)

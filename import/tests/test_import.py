@@ -16,8 +16,8 @@ def run_import(conn, site, tmp_path, events=(GPF,), wikidata=False):
     conn.execute("insert into imports default values")
     import_id = main.claim(conn)
     site.log.clear()
-    wikidata_url = f"{site.url}/wikidata/sparql?query=q&format=json" if wikidata else None
-    main.run(conn, import_id, events_file, tmp_path / "cache", "test@example.com", interval=0, wikidata_url=wikidata_url)
+    endpoint = f"{site.url}/wikidata/sparql" if wikidata else None  # answers every query with the combined fixture
+    main.run(conn, import_id, events_file, tmp_path / "cache", "test@example.com", interval=0, wikidata_endpoint=endpoint)
     return conn.execute("select status, counts, error from imports where id = %s", [import_id]).fetchone()
 
 
@@ -87,6 +87,15 @@ def test_wikidata_attaches_keys_and_names_once(conn, site, tmp_path):
 
     assert counts == {}
     assert snapshot(conn) == before
+
+
+def test_each_query_to_one_endpoint_is_its_own_cache_file(tmp_path):
+    sparql = "https://query.wikidata.org/sparql"
+
+    assert fetch.cache_path(tmp_path, f"{sparql}?query=a") != fetch.cache_path(tmp_path, f"{sparql}?query=b")
+    assert fetch.cache_path(tmp_path, f"{sparql}?query=a").parent == tmp_path / "query.wikidata.org"
+    # A page without a query string keeps its path, so the ISU cache stays where it is.
+    assert fetch.cache_path(tmp_path, "http://127.0.0.1:80/results/index.htm") == tmp_path / "127.0.0.1_80/results/index.htm.gz"
 
 
 def test_an_entry_removed_from_a_cached_page_is_gone_until_it_returns(conn, site, tmp_path):

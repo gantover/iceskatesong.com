@@ -46,8 +46,8 @@ def claim(conn) -> int | None:
 
 
 def run(conn, import_id: int, events_file: pathlib.Path, cache_dir: pathlib.Path, contact: str, interval=1.0,
-        wikidata_url: str | None = None) -> None:
-    """Run one claimed Import to `succeeded` or `failed`. `conn` must be in autocommit mode. No `wikidata_url`: no Wikidata step."""
+        wikidata_endpoint: str | None = None) -> None:
+    """Run one claimed Import to `succeeded` or `failed`. `conn` must be in autocommit mode. No `wikidata_endpoint`: no Wikidata step."""
     problems: list[dict] = []
     try:
         if not contact:
@@ -62,8 +62,8 @@ def run(conn, import_id: int, events_file: pathlib.Path, cache_dir: pathlib.Path
                 pages = []  # logged by the apply phase
             for page in pages:
                 fetcher.get(*apply.page_urls(url, page))
-        if wikidata_url:
-            fetcher.get(wikidata_url, timeout=60)  # the query takes ~15 s; the endpoint gives up at 60 s
+        if wikidata_endpoint:
+            wikidata_bodies = wikidata.fetch(fetcher, wikidata_endpoint, import_id)
         problems += [{"step": "fetch", "kind": "fetch failed", "key": url, "detail": {"error": error}}
                      for url, error in fetcher.failures]
         if len(fetcher.failures) > MAX_FAILED_FETCHES * fetcher.fetches:
@@ -72,8 +72,8 @@ def run(conn, import_id: int, events_file: pathlib.Path, cache_dir: pathlib.Path
         with conn.transaction():
             conn.execute(IMPORT_LOCK)
             counts = apply.Apply(conn, problems).run(urls, lambda url: fetch.read_cached(cache_dir, url))
-            if wikidata_url:
-                counts |= wikidata.run(conn, fetch.read_cached(cache_dir, wikidata_url), problems)
+            if wikidata_endpoint:
+                counts |= wikidata.run(conn, wikidata_bodies, problems)
             finish(conn, import_id, "succeeded", problems, counts=counts)
     except Exception as e:
         with conn.transaction():
@@ -113,7 +113,7 @@ def main() -> None:
             import_id = claim(conn)
             if import_id:
                 print(f"import: running Import {import_id}", flush=True)
-                run(conn, import_id, events_file, cache_dir, contact, wikidata_url=wikidata.URL)
+                run(conn, import_id, events_file, cache_dir, contact, wikidata_endpoint=wikidata.ENDPOINT)
                 print(f"import: Import {import_id} finished", flush=True)
             else:
                 time.sleep(POLL_SECONDS)

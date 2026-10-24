@@ -13,7 +13,9 @@ from urllib.parse import urlsplit
 
 def cache_path(cache_dir: pathlib.Path, url: str) -> pathlib.Path:
     parts = urlsplit(url)
-    return cache_dir / parts.netloc.replace(":", "_") / (parts.path.lstrip("/") + ".gz")
+    # Every query to an endpoint shares its path; a short hash of the query string tells them apart.
+    query = "-" + hashlib.sha256(parts.query.encode()).hexdigest()[:16] if parts.query else ""
+    return cache_dir / parts.netloc.replace(":", "_") / (parts.path.lstrip("/") + query + ".gz")
 
 
 def read_cached(cache_dir: pathlib.Path, url: str) -> bytes | None:
