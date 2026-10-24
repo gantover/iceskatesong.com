@@ -1,0 +1,10 @@
+import { error } from '@sveltejs/kit';
+import { db } from '#lib/server/db.js';
+import { PUBLIC_CACHE, pickSeason, teamPage } from '#lib/server/browse.js';
+
+export const load = async ({ params, setHeaders }) => {
+	const page = await teamPage(db, params.slug);
+	if (!page) error(404);
+	setHeaders(PUBLIC_CACHE);
+	return { team: page.team, skaters: page.skaters, ...pickSeason(page.performances, params.season) };
+};

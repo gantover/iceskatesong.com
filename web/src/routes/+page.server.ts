@@ -1,3 +1,3 @@
-import { databaseStatus, db } from '#lib/server/db.js';
+import { PUBLIC_CACHE } from '#lib/server/browse.js';
 
-export const load = async () => ({ status: await databaseStatus(db) });
+export const load = ({ setHeaders }) => setHeaders(PUBLIC_CACHE);

@@ -76,6 +76,7 @@ export interface Names {
   entity_id: Int8;
   name: string;
   origin: string;
+  search_key: Generated<string | null>;
 }
 
 export interface Performances {

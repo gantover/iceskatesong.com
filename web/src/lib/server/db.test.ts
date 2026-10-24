@@ -1,13 +1,9 @@
 import { sql } from 'kysely';
 import { afterAll, expect, inject, test } from 'vitest';
-import { createDb, databaseStatus } from './db.js';
+import { createDb } from './db.js';
 
 const db = createDb(inject('databaseUrl'));
 afterAll(() => db.destroy());
-
-test('databaseStatus reads from the migrated database', async () => {
-	expect(await databaseStatus(db)).toMatchObject({ unaccented: 'Kevin' });
-});
 
 test('the database is not on the C locale', async () => {
 	const { rows } = await sql<{ datcollate: string }>`
