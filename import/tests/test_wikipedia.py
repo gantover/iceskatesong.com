@@ -1,6 +1,7 @@
 """The Wikipedia step through the Import pipeline, with cached rendered real program tables."""
 
 import http.server
+import gzip
 import json
 import pathlib
 import threading
@@ -62,14 +63,16 @@ def program(conn, owner, season, segment_type, entity="skater"):
                         [owner, season, segment_type]).fetchone()[0]
 
 
-def run(conn, tmp_path, wikipedia):
+def run(conn, tmp_path, wikipedia, expected_status="succeeded"):
     events = tmp_path / "events.txt"
     events.write_text("")
     conn.execute("insert into imports default values")
     id = main.claim(conn)
     main.run(conn, id, events, tmp_path / "cache", "test@example.com", interval=0, wikipedia_endpoint=wikipedia.url)
     status, error = conn.execute("select status, error from imports where id = %s", [id]).fetchone()
-    assert (status, error) == ("succeeded", None)
+    assert status == expected_status, error
+    if expected_status == "succeeded":
+        assert error is None
 
 
 def test_a_wikipedia_music_claim_keeps_its_article_and_revision(conn, tmp_path, wikipedia):
@@ -132,9 +135,89 @@ def test_a_failed_followed_article_keeps_the_previous_music_and_its_revision(con
     wikipedia.articles[article["title"]] = {**article, "revid": article["revid"] + 1}
     wikipedia.failed.add(article["revid"] + 1)
 
-    run(conn, tmp_path, wikipedia)
+    run(conn, tmp_path, wikipedia, expected_status="failed")
 
     assert conn.execute("select raw_text, article_title, revision from music_claims where program_id = %s", [id]).fetchone() == before
+
+
+def test_a_failed_article_download_recovers_at_the_same_revision(conn, tmp_path, wikipedia):
+    owner = skater(conn, "Ilia MALININ", "Ilia Malinin", "00108049")
+    id = program(conn, owner, 2024, "short program")
+    revision = wikipedia.articles["Ilia Malinin"]["revid"]
+    wikipedia.failed.add(revision)
+    run(conn, tmp_path, wikipedia, expected_status="failed")
+    assert conn.execute("select count(*) from music_claims").fetchone() == (0,)
+    assert sum(request["action"] == "parse" for request in wikipedia.log) == 3
+    assert all(b"temporary failure" not in gzip.decompress(p.read_bytes()) for p in (tmp_path / "cache").rglob("*.gz"))
+
+    wikipedia.failed.clear()
+    run(conn, tmp_path, wikipedia)
+
+    claim = conn.execute("select raw_text, revision from music_claims where program_id = %s", [id]).fetchone()
+    assert claim is not None
+    assert "Running" in claim[0]
+    assert claim[1] == revision
+
+
+def test_only_program_evidence_is_persisted_and_an_unchanged_revision_uses_that_cache(conn, tmp_path, wikipedia):
+    owner = skater(conn, "Ilia MALININ", "Ilia Malinin", "00108049")
+    id = program(conn, owner, 2024, "short program")
+    article = wikipedia.articles["Ilia Malinin"]
+    biography = '<table class="infobox"><tr><th>Born</th><td>1971-02-03</td></tr><tr><th>Height</th><td>1.93 metres</td></tr></table>'
+    unfamiliar = '<h2>Programs</h2><table class="wikitable"><tr><th>Year</th><th>Unfamiliar program header</th></tr><tr><td>2024</td><td>Raw music for a future parser fix</td></tr></table>'
+    wikipedia.articles["Ilia Malinin"] = {**article, "text": biography + unfamiliar + article["text"]}
+
+    run(conn, tmp_path, wikipedia)
+
+    stored = b"\n".join(gzip.decompress(p.read_bytes()) for p in (tmp_path / "cache").rglob("*.gz"))
+    assert b"1971-02-03" not in stored
+    assert b"1.93 metres" not in stored
+    assert b"Running" in stored
+    assert b"rowspan" in stored
+    assert b"Shae-Lynn_Bourne" in stored
+    assert b"Raw music for a future parser fix" in stored
+    conn.execute("delete from music_claims")
+    wikipedia.log.clear()
+
+    run(conn, tmp_path, wikipedia)
+
+    assert all(request["action"] != "parse" for request in wikipedia.log)
+    assert "Running" in conn.execute("select raw_text from music_claims where program_id = %s", [id]).fetchone()[0]
+
+
+def test_a_legacy_full_article_cache_is_minimized_before_reuse(conn, tmp_path, wikipedia):
+    owner = skater(conn, "Ilia MALININ", "Ilia Malinin", "00108049")
+    id = program(conn, owner, 2024, "short program")
+    run(conn, tmp_path, wikipedia)
+    # Simulate a full response cached by the previous importer version.
+    article = wikipedia.articles["Ilia Malinin"]
+    legacy = {**article, "text": '<div class="infobox">Born 1971-02-03; height 1.93 metres</div>' + article["text"]}
+    cached = next(p for p in (tmp_path / "cache").rglob("*.gz") if '"parse"' in gzip.decompress(p.read_bytes()).decode())
+    cached.write_bytes(gzip.compress(json.dumps({"parse": legacy}).encode()))
+    conn.execute("delete from music_claims")
+    wikipedia.log.clear()
+
+    run(conn, tmp_path, wikipedia)
+
+    assert all(request["action"] != "parse" for request in wikipedia.log)
+    assert b"1971-02-03" not in gzip.decompress(cached.read_bytes())
+    assert b"1.93 metres" not in gzip.decompress(cached.read_bytes())
+    assert "Running" in conn.execute("select raw_text from music_claims where program_id = %s", [id]).fetchone()[0]
+
+
+def test_an_invalid_legacy_article_cache_is_refetched_at_the_same_revision(conn, tmp_path, wikipedia):
+    owner = skater(conn, "Ilia MALININ", "Ilia Malinin", "00108049")
+    id = program(conn, owner, 2024, "short program")
+    run(conn, tmp_path, wikipedia)
+    cached = next(p for p in (tmp_path / "cache").rglob("*.gz") if '"parse"' in gzip.decompress(p.read_bytes()).decode())
+    cached.write_bytes(gzip.compress(b'{"error": {"info": "temporary API failure"}}'))
+    conn.execute("delete from music_claims")
+    wikipedia.log.clear()
+
+    run(conn, tmp_path, wikipedia)
+
+    assert sum(request["action"] == "parse" for request in wikipedia.log) == 1
+    assert "Running" in conn.execute("select raw_text from music_claims where program_id = %s", [id]).fetchone()[0]
 
 
 def test_an_article_without_an_isu_crosswalk_creates_no_claim_and_logs_a_problem(conn, tmp_path, wikipedia):

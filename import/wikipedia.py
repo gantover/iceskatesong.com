@@ -8,7 +8,6 @@ from urllib.parse import unquote, urlencode, urlsplit
 from bs4 import BeautifulSoup
 from psycopg.types.json import Jsonb
 
-import fetch as page_cache
 import wikidata
 
 ENDPOINT = "https://en.wikipedia.org/w/api.php"
@@ -92,6 +91,54 @@ def segment_type(header):
     return next((segment for segment in SEGMENTS if segment in header), None)
 
 
+def followed_notes(soup, title):
+    """Eligible program-list/team pointers, excluding notes about background or individual music works."""
+    for note in soup.select(".hatnote"):
+        heading = note.find_previous(re.compile(r"^h[2-6]$"))
+        if heading and "program" in text(heading).lower():
+            links = [(a, t) for a in note.select("a[href]") if (t := link_title(a)) and t != title
+                     and (re.search(r"\blist\b.*\bprogram", t, re.I) or text(note).lower().startswith("main article"))]
+            if links:
+                yield links
+
+
+def program_evidence(body, revision):
+    """Validate and retain raw program-table HTML before caching; never write biographies to disk."""
+    try:
+        article = json.loads(body)["parse"]
+        if article["revid"] != revision:
+            raise ValueError("article revision differs from the requested revision")
+        title, html = article["title"], article["text"]
+        if not isinstance(title, str) or not isinstance(html, str):
+            raise ValueError("article title and HTML must be strings")
+    except (KeyError, TypeError) as e:
+        raise ValueError("invalid Wikipedia article response") from e
+    soup = BeautifulSoup(html, "html.parser")
+    fragments = []
+    for table in soup.select("table.wikitable"):
+        first = table.find("tr")
+        cells = first.find_all(["th", "td"], recursive=False) if first else []
+        section = table.find_previous("h2")
+        in_programs = section and re.search(r"\bprograms?\b", text(section), re.I)
+        recognized = cells and text(cells[0]).lower().startswith("season") and any(segment_type(text(c)) for c in cells[1:])
+        if not in_programs and not recognized:
+            continue
+        fragments.append("<h2>Programs</h2>")
+        for heading in table.find_all_previous(re.compile(r"^h[2-6]$")):
+            if re.match(r"with\s+", text(heading), re.I):
+                # Only the partnership scope is needed; unrelated headings can carry biographical information.
+                scope = soup.new_tag("h3")
+                scope.string = text(heading)
+                fragments.append(str(scope))
+                break
+            if heading.name == "h2":
+                break
+        fragments.append(str(table))
+    for links in followed_notes(soup, title):
+        fragments.append('<h2>Programs</h2><div class="hatnote">Main article: ' + " ".join(str(a) for a, _ in links) + "</div>")
+    return json.dumps({"parse": {"title": title, "revid": revision, "text": "\n".join(fragments)}}, ensure_ascii=False).encode()
+
+
 def parse(title, revision, html):
     soup = BeautifulSoup(html, "html.parser")
     for node in soup.select("sup.reference, .mw-editsection, .sortkey, span[style*='display:none']"):
@@ -131,11 +178,8 @@ def parse(title, revision, html):
                     rows.append(Row(int(season[1]), header, raw, titles, partner))
     follows = []
     # Follow only program-section main-article/see-also links, never all the music/person links in a table.
-    for note in soup.select(".hatnote"):
-        heading = note.find_previous(re.compile(r"^h[2-6]$"))
-        if heading and "program" in text(heading).lower():
-            follows += [t for a in note.select("a[href]") if (t := link_title(a)) and t != title
-                        and (re.search(r"\blist\b.*\bprogram", t, re.I) or text(note).lower().startswith("main article"))]
+    for links in followed_notes(soup, title):
+        follows += [title for _, title in links]
     return Article(title, revision, rows, list(dict.fromkeys(follows)))
 
 
@@ -171,9 +215,10 @@ def fetch(fetcher, endpoint, roots, problems):
             try:
                 revision = page["revisions"][0]["revid"]
                 url = api_url(endpoint, action="parse", oldid=revision, prop="text|revid")
-                body = page_cache.read_cached(fetcher.cache_dir, url)
+                transform = lambda body: program_evidence(body, revision)
+                body = fetcher.cached(url, transform)
                 if body is None:
-                    body = fetcher.get(url)
+                    body = fetcher.get(url, transform=transform)
                 parsed = json.loads(body)["parse"]
                 if parsed["revid"] != revision:
                     raise ValueError("article revision differs from the requested revision")

@@ -37,14 +37,32 @@ class Fetcher:
         self.fetches = 0
         self.failures: list[tuple[str, str]] = []  # (url, last error)
 
-    def get(self, url: str, *alternatives: str, timeout=30) -> bytes | None:
-        """When the host has no `url` (404), tries each of `alternatives` in turn instead."""
+    def cached(self, url: str, transform) -> bytes | None:
+        """Validate/project a cached body too: old full responses are minimized, invalid bodies cannot serve a 304."""
+        path = cache_path(self.cache_dir, url)
+        try:
+            body = read_cached(self.cache_dir, url)
+            if body is None:
+                return None
+            projected = transform(body)
+        except (ValueError, OSError, EOFError):
+            path.unlink(missing_ok=True)
+            self.conn.execute("delete from fetched_pages where url = %s", [url])
+            return None
+        if projected != body:
+            self._store(url, path, projected, {})
+        return projected
+
+    def get(self, url: str, *alternatives: str, timeout=30, transform=None) -> bytes | None:
+        """A transform validates/projects each response before any disk write. ValueError retries like a failed GET.
+        When the host has no `url` (404), tries each of `alternatives` in turn instead."""
         self.fetches += 1
         path = cache_path(self.cache_dir, url)
+        cached = self.cached(url, transform) if transform else read_cached(self.cache_dir, url)
         headers = {"User-Agent": self.user_agent}
         row = self.conn.execute("select etag, last_modified from fetched_pages where url = %s", [url]).fetchone()
         # Without the cached body a 304 would leave nothing to parse, so only ask conditionally when it exists.
-        if row and path.exists():
+        if row and cached is not None:
             if row[0]:
                 headers["If-None-Match"] = row[0]
             if row[1]:
@@ -54,23 +72,29 @@ class Fetcher:
             self._wait(url)
             try:
                 with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=timeout) as response:
-                    self._store(url, path, response.read(), response.headers)
+                    body = response.read()
+                    if transform:
+                        body = transform(body)
+                    self._store(url, path, body, response.headers)
+                    cached = body
                 break
             except urllib.error.HTTPError as e:
-                if e.code == 304:
+                if e.code == 304 and cached is not None:
                     break
                 if e.code == 404 and alternatives:
                     self.fetches -= 1  # one page: count it once in the failure ratio
-                    return self.get(*alternatives, timeout=timeout)
+                    return self.get(*alternatives, timeout=timeout, transform=transform)
                 if e.code == 429:  # rate limited for minutes (Wikidata says 120 s): asking again now only prolongs it
                     self.failures.append((url, "HTTP 429"))
-                    return read_cached(self.cache_dir, url)
+                    return cached
                 error = f"HTTP {e.code}"
             except (OSError, http.client.HTTPException) as e:  # URLError, timeouts, resets, truncated bodies
                 error = repr(e)
+            except ValueError as e:
+                error = str(e)
         else:
             self.failures.append((url, error))
-        return read_cached(self.cache_dir, url)
+        return cached
 
     def _wait(self, url: str) -> None:
         host = urlsplit(url).netloc
