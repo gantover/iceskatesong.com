@@ -2,17 +2,17 @@
 	import { Button } from '#lib/components/ui/button/index.js';
 	import { cn } from '#lib/utils.js';
 
-	type Video = { youtube_id: string; start_seconds: number | null; origin: string; title: string | null; playable: boolean };
+	type Video = { youtube_id: string; start_seconds: number | null; origin: string; title: string | null };
 
 	/**
 	 * Click-to-load YouTube player: nothing from Google or YouTube loads before the click.
-	 * `videos` come in play order; the first playable one is shown.
+	 * `videos` come in play order; the first one is shown.
 	 */
 	let { videos }: { videos: Video[] } = $props();
 
-	// svelte-ignore state_referenced_locally
 	// Raw: a deep $state proxy would never be === to an entry of `videos`.
-	let current = $state.raw(videos.find((v) => v.playable));
+	// svelte-ignore state_referenced_locally
+	let current = $state.raw(videos[0]);
 	let loaded = $state(false);
 
 	const LABELS: Record<string, string> = { official: 'Official ISU video', admin: 'Added by the Admin', submitted: 'Submitted video' };
@@ -28,8 +28,6 @@
 
 {#if !videos.length}
 	{@render empty('No video yet', 'Know a YouTube video of this Performance? Submitting one comes soon.')}
-{:else if !current}
-	{@render empty('Not available in your country', "YouTube doesn't let any video of this Performance play here.")}
 {:else if loaded}
 	<iframe
 		class="aspect-video w-full rounded-lg"
@@ -62,15 +60,10 @@
 	<ul class="mt-2 space-y-1 text-sm">
 		{#each videos as v, i (i)}
 			<li class="flex flex-wrap items-center gap-2">
-				<button
-					type="button"
-					disabled={!v.playable}
-					onclick={() => (current = v)}
-					class={cn('hover:underline disabled:no-underline disabled:opacity-60', v === current && 'font-semibold')}
+				<button type="button" onclick={() => (current = v)} class={cn('hover:underline', v === current && 'font-semibold')}
 					>{v === current ? '▶' : '·'} {label(v)}</button
 				>
 				{#if v.start_seconds === null}<span class="bg-muted text-muted-foreground rounded px-1.5 text-xs">untimed, plays last</span>{/if}
-				{#if !v.playable}<span class="bg-muted text-muted-foreground rounded px-1.5 text-xs">not available here</span>{/if}
 			</li>
 		{/each}
 	</ul>

@@ -20,7 +20,7 @@
 
 	<div class="mt-4 grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
 		<div>
-			<!-- A new Performance starts a new slot: back to its first playable video, not yet loaded. -->
+			<!-- A new Performance starts a new slot: back to its first video, not yet loaded. -->
 			{#key p.id}<VideoSlot videos={data.videos} />{/key}
 		</div>
 		<aside class="space-y-4">

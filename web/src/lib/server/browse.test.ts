@@ -2,7 +2,7 @@ import type { Kysely } from 'kysely';
 import { afterAll, expect, inject, test } from 'vitest';
 import { createDb } from './db.js';
 import type { DB } from './db-types.js';
-import { playOrder, search, skaterPage } from './browse.js';
+import { performancePage, playOrder, search, skaterPage } from './browse.js';
 
 const db = createDb(inject('databaseUrl'));
 afterAll(() => db.destroy());
@@ -77,46 +77,21 @@ test('an alias finds its Skater once, and Teams come in their own group', () =>
 		});
 	}));
 
-const video = (youtube_id: string, start_seconds: number | null, origin = 'official', regions = {}) => ({
-	youtube_id,
-	start_seconds,
-	origin,
-	title: null,
-	embeddable: true,
-	blocked_regions: [] as string[],
-	allowed_regions: null as string[] | null,
-	...regions
-});
+const video = (youtube_id: string, start_seconds: number | null, origin = 'official') => ({ youtube_id, start_seconds, origin });
 const ids = (videos: { youtube_id: string }[]) => videos.map((v) => v.youtube_id);
 
 test('clips and timed streams play first, untimed streams last, each in origin order', () => {
 	const order = playOrder(
-		[video('untimed-official', null), video('clip-submitted', 0, 'submitted'), video('timed-admin', 95, 'admin'), video('untimed-admin', null, 'admin'), video('clip-official', 0)],
-		null
+		[video('untimed-official', null), video('clip-submitted', 0, 'submitted'), video('timed-admin', 95, 'admin'), video('untimed-admin', null, 'admin'), video('clip-official', 0)]
 	);
 	expect(ids(order)).toEqual(['clip-official', 'timed-admin', 'clip-submitted', 'untimed-official', 'untimed-admin']);
 });
 
-test("videos blocked in the visitor's country, or not embeddable, can't play", () => {
-	const videos = [
-		video('blocked-in-fr', 0, 'official', { blocked_regions: ['FR', 'DE'] }),
-		video('only-in-jp', 0, 'official', { allowed_regions: ['JP'] }),
-		video('not-embeddable', 0, 'official', { embeddable: false }),
-		// The cache row expired: nothing known, so it plays.
-		video('uncached', 0, 'official', { embeddable: null, blocked_regions: null }),
-		video('fine', null)
-	];
-	const playable = (country: string | null) => ids(playOrder(videos, country).filter((v) => v.playable));
-	expect(playable('FR')).toEqual(['uncached', 'fine']);
-	expect(playable('JP')).toEqual(['blocked-in-fr', 'only-in-jp', 'uncached', 'fine']);
-	expect(playable(null)).toEqual(['blocked-in-fr', 'only-in-jp', 'uncached', 'fine']);
-});
-
-/** One Segment of a new Competition, and a Performance in it of a Skater or Team. */
+/** One Segment of a new Competition, and a Performance in it of a Skater or Team: of a new Program unless `program_id` is given. */
 async function performance(
 	trx: Kysely<DB>,
 	who: { skater_id: string } | { team_id: string },
-	{ discipline = 'men', segment_type = 'short program', gone = false, rank = 1 } = {}
+	{ discipline = 'men', segment_type = 'short program', gone = false, rank = 1, program_id = '' } = {}
 ) {
 	const competition = await trx
 		.insertInto('competitions')
@@ -128,7 +103,9 @@ async function performance(
 		.values({ competition_id: competition.id, discipline, level: 'senior', segment_type, url: 'https://results.isu.org/x' })
 		.returning('id')
 		.executeTakeFirstOrThrow();
-	const program = await trx.insertInto('programs').values({ ...who, season: 2025, segment_type }).returning('id').executeTakeFirstOrThrow();
+	const program = program_id
+		? { id: program_id }
+		: await trx.insertInto('programs').values({ ...who, season: 2025, segment_type }).returning('id').executeTakeFirstOrThrow();
 	const { id } = await trx
 		.insertInto('performances')
 		.values({ ...who, segment_id: segment.id, program_id: program.id, entry_key: 'k', name: 'n', nation: 'FRA', rank, tss: '90.12', gone })
@@ -161,4 +138,37 @@ test("a Skater's page lists their Team's Performances, without gone Performances
 			{ id: pairs, rank: 1, team: { slug: 'anna-partner-boris-partner', name: 'Anna PARTNER / Boris PARTNER' }, video: false }
 		]);
 		expect(await skaterPage(trx, 'nobody')).toBeUndefined();
+	}));
+
+test('a Performance page shows its active videos in play order and its Program\'s other Performances, never a gone one', () =>
+	rolledBack(async (trx) => {
+		const her = await skater(trx, 'Anna PARTNER', 'anna-partner');
+		const page = await performance(trx, { skater_id: her });
+		const { program_id } = await trx.selectFrom('performances').select('program_id').where('id', '=', page).executeTakeFirstOrThrow();
+		const other = await performance(trx, { skater_id: her }, { program_id, rank: 2 });
+		const gone = await performance(trx, { skater_id: her }, { program_id, gone: true });
+		await trx
+			.insertInto('performance_videos')
+			.values([
+				{ youtube_id: 'perf-page-stream', start_seconds: null, performance_id: page, origin: 'official' },
+				{ youtube_id: 'perf-page-clip', start_seconds: 0, performance_id: page, origin: 'official' },
+				{ youtube_id: 'perf-page-hidden', start_seconds: 0, performance_id: page, origin: 'official', status: 'hidden' },
+				{ youtube_id: 'perf-page-other', start_seconds: 0, performance_id: other, origin: 'official' }
+			])
+			.execute();
+		// Only the clip has a YouTube cache row: the stream's has expired, and its link stays.
+		await trx
+			.insertInto('youtube_videos')
+			.values({ youtube_id: 'perf-page-clip', title: 'GPF clip', channel_id: 'c', published_at: new Date(), duration_seconds: 300, embeddable: true, made_for_kids: false, refreshed_at: new Date() })
+			.execute();
+
+		const shown = await performancePage(trx, page);
+
+		expect(shown?.performance).toMatchObject({ name: 'Anna PARTNER', entity: 'skater', slug: 'anna-partner', url: 'https://results.isu.org/x' });
+		expect(shown?.videos.map((v) => [v.youtube_id, v.title])).toEqual([
+			['perf-page-clip', 'GPF clip'],
+			['perf-page-stream', null]
+		]);
+		expect(shown?.sameProgram.map((p) => ({ id: p.id, video: p.video }))).toEqual([{ id: other, video: true }]);
+		expect(await performancePage(trx, gone)).toBeUndefined();
 	}));

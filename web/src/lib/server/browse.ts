@@ -46,24 +46,13 @@ export async function search(db: Kysely<DB>, query: string) {
 
 const ORIGINS = ['official', 'admin', 'submitted'];
 
-// The region and embeddable fields are null once the video's YouTube cache row has expired: it plays then.
-type Playable = {
-	start_seconds: number | null;
-	origin: string;
-	embeddable: boolean | null;
-	blocked_regions: string[] | null;
-	allowed_regions: string[] | null;
-};
-
 /**
  * A Performance's videos in play order: clips and timed streams, then untimed streams, each in origin order.
- * `playable` is false when YouTube blocks the video in `country` (CF-IPCountry; null: nothing blocked) or forbids embedding.
+ * Geo-blocked videos stay in: the page is the same for every visitor, and YouTube tells a blocked one.
  */
-export function playOrder<V extends Playable>(videos: V[], country: string | null) {
+export function playOrder<V extends { start_seconds: number | null; origin: string }>(videos: V[]) {
 	const rank = (v: V) => (v.start_seconds === null ? ORIGINS.length : 0) + ORIGINS.indexOf(v.origin);
-	const blocked = (v: V) =>
-		!!country && (!!v.blocked_regions?.includes(country) || (!!v.allowed_regions && !v.allowed_regions.includes(country)));
-	return videos.toSorted((a, b) => rank(a) - rank(b)).map((v) => ({ ...v, playable: v.embeddable !== false && !blocked(v) }));
+	return videos.toSorted((a, b) => rank(a) - rank(b));
 }
 
 // A Season's Segments in skating order.
@@ -160,10 +149,10 @@ export async function teamPage(db: Kysely<DB>, slug: string) {
 }
 
 /**
- * A Performance not marked gone, with its active videos in play order for `country`, and the other
- * Performances of its Program; undefined when there is none.
+ * A Performance not marked gone, with its active videos in play order, and the other Performances
+ * of its Program; undefined when there is none.
  */
-export async function performancePage(db: Kysely<DB>, id: string, country: string | null) {
+export async function performancePage(db: Kysely<DB>, id: string) {
 	const { rows } = await sql<
 		Omit<PerformanceRow, 'video' | 'team'> & {
 			program_id: string;
@@ -196,13 +185,13 @@ export async function performancePage(db: Kysely<DB>, id: string, country: strin
 	const videos = await db
 		.selectFrom('performance_videos as v')
 		.leftJoin('youtube_videos as y', 'y.youtube_id', 'v.youtube_id')
-		.select(['v.youtube_id', 'v.start_seconds', 'v.origin', 'y.title', 'y.embeddable', 'y.blocked_regions', 'y.allowed_regions'])
+		.select(['v.youtube_id', 'v.start_seconds', 'v.origin', 'y.title'])
 		.where('v.performance_id', '=', id)
 		.where('v.status', '=', 'active')
 		.orderBy('v.id')
 		.execute();
 	const sameProgram = await performanceRows(db, sql`p.program_id = ${performance.program_id} and p.id <> ${id}`);
-	return { performance, videos: playOrder(videos, country), sameProgram };
+	return { performance, videos: playOrder(videos), sameProgram };
 }
 
 /** The Season tabs of a career, newest first, and the rows of the one in the URL (else the newest); undefined for a Season not in it. */

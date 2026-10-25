@@ -101,7 +101,7 @@ Each Import links official clips to Performances after the ISU apply ([How does 
 6. **Full-segment streams** (over 30 min, not practice, naming a Segment type; a ceremony in the same stream is fine) link to every Performance of their Segment with an empty start time; a "Skaters N–M" stream links only that start-number range. Untimed streams play last.
 7. Titles are a transient signal: we store only the YouTube ID and our own link.
 
-**Play order** on a Performance: clips and timed streams first, untimed streams last, each in origin order (`official`, `admin`, `submitted`), skipping any video blocked in the viewer's `CF-IPCountry`.
+**Play order** on a Performance: clips and timed streams first, untimed streams last, each in origin order (`official`, `admin`, `submitted`). Geo-blocked videos are not skipped: the page is the same for every visitor (one shared cache), and YouTube tells a viewer in a blocked country.
 
 ### Music and match grades
 
@@ -143,7 +143,7 @@ Layout A: one page per record, single column, works on mobile ([What do the publ
 - **Skater page** (and a **Team page** built the same way): Season tabs, newest first. Each Season lists Competition cards with one row per Segment: rank, score, music with grade badges, video marker. A Skater page also lists the Performances of their Teams.
 - **Piece page**: title, composers, Source, Wikidata link, Skater and Program counts; one collapsible block per Skater (open when ≤4 Skaters) with their Programs (Season, Segment, grade, raw text) and each Program's Performances.
 - **Performance page**: breadcrumb to the Skater's Season; video first (beside the result and music on desktop, stacked on mobile); result card with the ISU result link; music card with grade badges, raw Wikipedia text and article link; "Same Program, other Competitions".
-- **Video slot**: a click-to-load placeholder served by us (YouTube logo, video title, one-line privacy notice; no `i.ytimg.com` thumbnail before the click). The click loads the `youtube-nocookie` player. Alternatives listed under the player, the untimed stream labelled "untimed, plays last". Geo-blocked videos are skipped, or the slot says "Not available in your country". No video: "No video yet".
+- **Video slot**: a click-to-load placeholder served by us (YouTube logo, video title, one-line privacy notice; no `i.ytimg.com` thumbnail before the click). The click loads the `youtube-nocookie` player. Alternatives listed under the player, the untimed stream labelled "untimed, plays last". No video: "No video yet".
 - **Grades**: a badge after each Piece on every music line; music search hits show the grade mix ("15 Programs: 2 identified, 13 credited").
 - **R2/R3 entry points** are laid out in R1 and disabled: "Wrong video?" and "Submit another video" under the player; "Wrong music?" and "Suggest music" under the music card; "Wrong music?" on the Piece page.
 - Performances marked `gone` are hidden everywhere.
