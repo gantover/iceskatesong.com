@@ -2,6 +2,7 @@
 	import type { PerformanceRow } from '#lib/server/browse.js';
 	import { dateRange, seasonName, segmentName } from '#lib/format.js';
 	import { cn } from '#lib/utils.js';
+	import { wikipediaUrl } from '#lib/wikipedia.js';
 
 	/** Season tabs linking to `{base}/{season}`, and the chosen Season's Competitions, one row per Segment. */
 	let {
@@ -43,23 +44,27 @@
 		<ul class="divide-y">
 			{#each rows as p (p.id)}
 				<li>
-					<a
-						href="/performance/{p.id}"
-						class="hover:bg-muted grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 px-4 py-2.5 sm:grid-cols-[14rem_6rem_1fr_6rem]"
+					<div
+						class="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 px-4 py-2.5 sm:grid-cols-[14rem_6rem_1fr_6rem]"
 					>
-						<span>
+						<a href="/performance/{p.id}" class="hover:underline">
 							{segmentName(p)}
 							{#if p.team}<span class="text-muted-foreground block text-sm">{p.team.name}</span>{/if}
-						</span>
+						</a>
 						<span class="tabular-nums">
 							{#if p.rank_label}{p.rank_label}{:else}<strong>{p.rank ?? '–'}</strong>
 								<span class="text-muted-foreground text-sm">{p.tss ?? ''}</span>{/if}
 						</span>
-						<span class="text-muted-foreground text-sm">Music not known yet</span>
-						<span class={cn('text-sm sm:text-right', p.video ? 'text-primary' : 'text-muted-foreground')}>
+						{#if p.music?.origin === 'wikipedia' && p.music.article_title}
+							<a href={wikipediaUrl(p.music.article_title, p.music.revision)} title="Music: Wikipedia, {p.music.article_title}"
+								class="text-muted-foreground whitespace-pre-line text-sm hover:underline">{p.music.raw_text} ↗</a>
+						{:else}
+							<span class="text-muted-foreground whitespace-pre-line text-sm">{p.music?.raw_text ?? 'Music not known yet'}</span>
+						{/if}
+						<a href="/performance/{p.id}" class={cn('text-sm hover:underline sm:text-right', p.video ? 'text-primary' : 'text-muted-foreground')}>
 							{p.video ? '▶ video' : 'no video'}
-						</span>
 					</a>
+					</div>
 				</li>
 			{/each}
 		</ul>
@@ -67,3 +72,10 @@
 {:else}
 	<p class="text-muted-foreground">No results on record.</p>
 {/each}
+
+{#if performances.some((p) => p.music?.origin === 'wikipedia')}
+	<p class="text-muted-foreground mt-4 text-xs">
+		Music: Wikipedia (linked on each music entry) ·
+		<a href="https://creativecommons.org/licenses/by-sa/4.0/" class="hover:underline">CC BY-SA 4.0, modified</a>.
+	</p>
+{/if}

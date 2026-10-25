@@ -1,4 +1,4 @@
-import type { Kysely } from 'kysely';
+import { sql, type Kysely } from 'kysely';
 import { afterAll, expect, inject, test } from 'vitest';
 import { createDb } from './db.js';
 import type { DB } from './db-types.js';
@@ -171,4 +171,20 @@ test('a Performance page shows its active videos in play order and its Program\'
 		]);
 		expect(shown?.sameProgram.map((p) => ({ id: p.id, video: p.video }))).toEqual([{ id: other, video: true }]);
 		expect(await performancePage(trx, gone)).toBeUndefined();
+	}));
+
+test('a Program shows its raw Wikipedia music and revision on the Performance and Skater pages, with human music taking precedence', () =>
+	rolledBack(async (trx) => {
+		const owner = await skater(trx, 'Ilia MALININ', 'ilia-malinin');
+		const id = await performance(trx, { skater_id: owner });
+		const { program_id } = await trx.selectFrom('performances').select('program_id').where('id', '=', id).executeTakeFirstOrThrow();
+		await sql`insert into music_claims (program_id, origin, raw_text, article_title, revision)
+			values (${program_id}, 'wikipedia', 'Running by NF', 'Ilia Malinin', 1378424980)`.execute(trx);
+
+		expect((await performancePage(trx, id))?.performance.music).toEqual({
+			raw_text: 'Running by NF', origin: 'wikipedia', article_title: 'Ilia Malinin', revision: '1378424980'
+		});
+		expect((await skaterPage(trx, 'ilia-malinin'))?.performances[0].music?.raw_text).toBe('Running by NF');
+		await sql`insert into music_claims (program_id, origin, raw_text) values (${program_id}, 'admin', 'Corrected music')`.execute(trx);
+		expect((await performancePage(trx, id))?.performance.music?.raw_text).toBe('Corrected music');
 	}));

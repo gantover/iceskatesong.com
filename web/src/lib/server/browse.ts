@@ -64,6 +64,21 @@ const SEGMENT_ORDER = sql.lit(
 const slugOf = (entity: 'skater' | 'team', id: string) =>
 	sql<string>`(select min(value) from keys k where k.system = 'slug' and k.entity = ${entity} and k.entity_id = ${sql.ref(id)})`;
 
+export type MusicClaim = {
+	raw_text: string;
+	origin: string;
+	article_title: string | null;
+	revision: string | null;
+};
+
+const musicOf = (program: string) => sql<MusicClaim | null>`(
+	select json_build_object('raw_text', m.raw_text, 'origin', m.origin,
+		'article_title', m.article_title, 'revision', m.revision::text)
+	from music_claims m where m.program_id = ${sql.ref(program)}
+	order by array_position('{admin,corrections,submitted,wikipedia,isu}'::text[], m.origin)
+	limit 1
+)`;
+
 async function idBySlug(db: Kysely<DB>, entity: 'skater' | 'team', slug: string) {
 	const row = await db
 		.selectFrom('keys')
@@ -91,6 +106,7 @@ export type PerformanceRow = {
 	rank_label: string | null;
 	tss: string | null;
 	video: boolean;
+	music: MusicClaim | null;
 	/** The Team that skated it, when it is a Team's Performance. */
 	team: Hit | null;
 };
@@ -100,7 +116,7 @@ async function performanceRows(db: Kysely<DB>, where: RawBuilder<boolean>) {
 	const { rows } = await sql<PerformanceRow>`
 		select p.id, pr.season, c.id as competition_id, c.name as competition, c.city,
 			c.start_date::text, c.end_date::text, s.discipline, s.level, s.segment_type, s.round,
-			p.rank, p.rank_label, p.tss,
+			p.rank, p.rank_label, p.tss, ${musicOf('pr.id')} as music,
 			exists (select from performance_videos v where v.performance_id = p.id and v.status = 'active') as video,
 			case when t.id is not null then json_build_object('slug', ${slugOf('team', 't.id')}, 'name', t.name) end as team
 		from performances p
@@ -168,7 +184,7 @@ export async function performancePage(db: Kysely<DB>, id: string) {
 	>`
 		select p.id, pr.season, p.program_id, c.id as competition_id, c.name as competition, c.city,
 			c.start_date::text, c.end_date::text, s.discipline, s.level, s.segment_type, s.round, s.url,
-			p.rank, p.rank_label, p.tss, p.tes, p.pcs, p.deductions, p.start_number,
+			p.rank, p.rank_label, p.tss, p.tes, p.pcs, p.deductions, p.start_number, ${musicOf('pr.id')} as music,
 			case when p.team_id is null then 'skater' else 'team' end as entity,
 			coalesce(sk.name, t.name) as name,
 			coalesce(${slugOf('skater', 'sk.id')}, ${slugOf('team', 't.id')}) as slug

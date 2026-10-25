@@ -71,6 +71,15 @@ export interface Keys {
   value: string;
 }
 
+export interface MusicClaims {
+  article_title: string | null;
+  origin: string;
+  program_id: Int8;
+  raw_text: string;
+  revision: Int8 | null;
+  title_qids: Generated<Json>;
+}
+
 export interface Names {
   entity: string;
   entity_id: Int8;
@@ -158,6 +167,7 @@ export interface DB {
   import_problems: ImportProblems;
   imports: Imports;
   keys: Keys;
+  music_claims: MusicClaims;
   names: Names;
   performance_videos: PerformanceVideos;
   performances: Performances;

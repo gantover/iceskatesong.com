@@ -1,6 +1,7 @@
 <script lang="ts">
 	import VideoSlot from '#lib/components/VideoSlot.svelte';
 	import { dateRange, seasonName, segmentName } from '#lib/format.js';
+	import { wikipediaUrl } from '#lib/wikipedia.js';
 
 	let { data } = $props();
 	const p = $derived(data.performance);
@@ -24,6 +25,20 @@
 			{#key p.id}<VideoSlot videos={data.videos} />{/key}
 		</div>
 		<aside class="space-y-4">
+			<section class="bg-card rounded-lg border p-4">
+				<h2 class="text-muted-foreground text-xs tracking-wide uppercase">Music</h2>
+				<p class="mt-2 whitespace-pre-line text-sm">{p.music?.raw_text ?? 'Music not known yet'}</p>
+				{#if p.music?.origin === 'wikipedia' && p.music.article_title}
+					<p class="text-muted-foreground mt-2 text-xs">
+						Music: <a href={wikipediaUrl(p.music.article_title, p.music.revision)} class="hover:underline">Wikipedia, {p.music.article_title}</a> ·
+						<a href="https://creativecommons.org/licenses/by-sa/4.0/" class="hover:underline">CC BY-SA 4.0, modified</a>.
+					</p>
+				{/if}
+				<div class="mt-3 flex flex-wrap gap-3 text-sm">
+					<button disabled class="text-muted-foreground cursor-not-allowed" title="Available in a future release">Wrong music?</button>
+					<button disabled class="text-muted-foreground cursor-not-allowed" title="Available in a future release">Suggest music</button>
+				</div>
+			</section>
 			<section class="bg-card rounded-lg border p-4">
 				<h2 class="text-muted-foreground text-xs tracking-wide uppercase">Result</h2>
 				<p class="mt-1 text-2xl tabular-nums">
