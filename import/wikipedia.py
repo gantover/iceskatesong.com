@@ -21,6 +21,7 @@ class Row:
     raw_text: str
     titles: list[str]
     partner: str | None
+    entries: list[dict] = dataclasses.field(default_factory=list)
 
 
 @dataclasses.dataclass
@@ -50,6 +51,30 @@ def link_title(link):
 
 def text(cell):
     return re.sub(r"\s+", " ", cell.get_text(" ", strip=True)).strip()
+
+
+def music_entries(cell):
+    """Keep Piece boundaries and visible link labels, including the program-list template's shared credits."""
+    def entry(nodes):
+        return {"raw": " ".join(text(n) for n in nodes),
+                "titles": {text(a): title for n in nodes for a in n.select("a[href]") if (title := link_title(a))}}
+
+    if box := cell.select_one("div[style*='padding-top:0.2em']"):
+        ordered = box.find("ol")
+        shared = ordered.find_next_sibling("ul") if ordered else box.find("ul")
+        if ordered:
+            entries = []
+            for li in ordered.find_all("li", recursive=False):
+                nodes = [li]
+                if shared:
+                    nodes.append(shared)
+                entries.append(entry(nodes))
+            return entries
+        title = box.find("div", style=re.compile("line-height"))
+        if title:
+            return [entry([title] + ([shared] if shared else []))]
+    listed = [li for li in cell.find_all("li") if not li.find_parent("li")]
+    return [entry([li]) for li in listed] if listed else [entry([cell])]
 
 
 def span(cell, name):
@@ -174,7 +199,7 @@ def parse(title, revision, html):
                 if header and raw and raw.lower() not in ("—", "–", "n/a", "none") and not re.search(
                         r"did not compete|not competing|no program", raw, re.I):
                     titles = list(dict.fromkeys(t for a in cell.select("a[href]") if (t := link_title(a))))
-                    rows.append(Row(int(season[1]), header, raw, titles, partner))
+                    rows.append(Row(int(season[1]), header, raw, titles, partner, music_entries(cell)))
     follows = []
     # Follow only program-section main-article/see-also links, never all the music/person links in a table.
     for links in followed_notes(soup, title):
@@ -291,19 +316,20 @@ def apply(conn, reached, qids, problems):
                 raw = "\n".join(dict.fromkeys(r.raw_text for r in rows))
                 title_qids = {t: qids[t] for row in rows for t in row.titles if t in qids}
                 # A dedicated program list follows the summary article and supplies the fuller raw text.
-                claims[program] = (raw, article.title, article.revision, title_qids)
+                entries = list({json.dumps(e, sort_keys=True): e for row in rows for e in row.entries}.values())
+                claims[program] = (raw, article.title, article.revision, title_qids, entries)
     for program in sorted(refreshed):
         if program not in claims:
             deleted += conn.execute("delete from music_claims where program_id = %s and origin = 'wikipedia'", [program]).rowcount
             continue
-        raw, title, revision, title_qids = claims[program]
-        row = conn.execute("""insert into music_claims (program_id, origin, raw_text, article_title, revision, title_qids)
-            values (%s, 'wikipedia', %s, %s, %s, %s) on conflict (program_id, origin) do update
+        raw, title, revision, title_qids, entries = claims[program]
+        row = conn.execute("""insert into music_claims (program_id, origin, raw_text, article_title, revision, title_qids, entries)
+            values (%s, 'wikipedia', %s, %s, %s, %s, %s) on conflict (program_id, origin) do update
             set raw_text = excluded.raw_text, article_title = excluded.article_title, revision = excluded.revision,
-                title_qids = excluded.title_qids
-            where (music_claims.raw_text, music_claims.article_title, music_claims.revision, music_claims.title_qids)
-                is distinct from (excluded.raw_text, excluded.article_title, excluded.revision, excluded.title_qids)
-            returning xmax = 0""", [program, raw, title, revision, Jsonb(title_qids)]).fetchone()
+                title_qids = excluded.title_qids, entries = excluded.entries
+            where (music_claims.raw_text, music_claims.article_title, music_claims.revision, music_claims.title_qids, music_claims.entries)
+                is distinct from (excluded.raw_text, excluded.article_title, excluded.revision, excluded.title_qids, excluded.entries)
+            returning xmax = 0""", [program, raw, title, revision, Jsonb(title_qids), Jsonb(entries)]).fetchone()
         if row:
             if row[0]:
                 created += 1

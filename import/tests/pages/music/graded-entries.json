@@ -1,0 +1,541 @@
+{
+  "entries": [
+    {
+      "id": 5238,
+      "raw": "Sorry by Rick Wakeman choreo. by Viivi Virtanen, Lilli Hepi",
+      "title_qids": {},
+      "model_pieces": [
+        {
+          "title": "Sorry",
+          "composers": [
+            "Rick Wakeman"
+          ],
+          "source": null,
+          "performer": null,
+          "style": "original",
+          "genres": []
+        }
+      ],
+      "expected": [
+        "Sorry",
+        [
+          "Rick Wakeman"
+        ],
+        null,
+        null,
+        "credited"
+      ]
+    },
+    {
+      "id": 912,
+      "raw": "Tosca by Giacomo Puccini",
+      "title_qids": {
+        "Tosca": "Q192941",
+        "Giacomo Puccini": "Q7311"
+      },
+      "model_pieces": [
+        {
+          "title": "Tosca",
+          "composers": [
+            "Giacomo Puccini"
+          ],
+          "source": null,
+          "performer": null,
+          "style": "original",
+          "genres": []
+        }
+      ],
+      "expected": [
+        "Tosca",
+        [
+          "Giacomo Puccini"
+        ],
+        null,
+        null,
+        "identified"
+      ]
+    },
+    {
+      "id": 204,
+      "raw": "Spartacus by Aram Khachaturian",
+      "title_qids": {
+        "Aram Khachaturian": "Q152293"
+      },
+      "model_pieces": [
+        {
+          "title": "Spartacus",
+          "composers": [
+            "Aram Khachaturian"
+          ],
+          "source": null,
+          "performer": null,
+          "style": "original",
+          "genres": []
+        }
+      ],
+      "expected": [
+        "Spartacus",
+        [
+          "Aram Khachaturian"
+        ],
+        null,
+        null,
+        "credited"
+      ]
+    },
+    {
+      "id": 6074,
+      "raw": "\"Lamentations\" By Marimuz Choreo. by Denis Lunin",
+      "title_qids": {},
+      "model_pieces": [
+        {
+          "title": "Lamentations",
+          "composers": [
+            "Marimuz"
+          ],
+          "source": null,
+          "performer": null,
+          "style": "original",
+          "genres": []
+        }
+      ],
+      "expected": [
+        "Lamentations",
+        [
+          "Marimuz"
+        ],
+        null,
+        null,
+        "credited"
+      ]
+    },
+    {
+      "id": 2253,
+      "raw": "Dibby Dibby Sound by Avera",
+      "title_qids": {
+        "Dibby Dibby Sound": "Q17001725"
+      },
+      "model_pieces": [
+        {
+          "title": "Dibby Dibby Sound",
+          "composers": [
+            "Avera"
+          ],
+          "source": null,
+          "performer": null,
+          "style": "original",
+          "genres": []
+        }
+      ],
+      "expected": [
+        "Dibby Dibby Sound",
+        [],
+        null,
+        null,
+        "identified"
+      ]
+    },
+    {
+      "id": 2006,
+      "raw": "Rain, In Your Black Eyes by Ezio Bosso",
+      "title_qids": {
+        "Ezio Bosso": "Q3736359"
+      },
+      "model_pieces": [
+        {
+          "title": "Rain, In Your Black Eyes",
+          "composers": [
+            "Ezio Bosso"
+          ],
+          "source": null,
+          "performer": null,
+          "style": "original",
+          "genres": []
+        }
+      ],
+      "expected": [
+        "Rain, In Your Black Eyes",
+        [
+          "Ezio Bosso"
+        ],
+        null,
+        null,
+        "credited"
+      ]
+    },
+    {
+      "id": 1828,
+      "raw": "Swing: Crazy Little Thing Called Love by Queen",
+      "title_qids": {
+        "Crazy Little Thing Called Love": "Q178905",
+        "Queen": "Q15862"
+      },
+      "model_pieces": [
+        {
+          "title": "Crazy Little Thing Called Love",
+          "composers": [],
+          "source": null,
+          "performer": "Queen",
+          "style": "original",
+          "genres": []
+        }
+      ],
+      "expected": [
+        "Crazy Little Thing Called Love",
+        [
+          "Freddie Mercury"
+        ],
+        null,
+        "Queen",
+        "identified"
+      ]
+    },
+    {
+      "id": 1143,
+      "raw": "Paya d'Ora by Orquesta del Tango de la Ciudad de Buenos Aires",
+      "title_qids": {},
+      "model_pieces": [
+        {
+          "title": "Paya d'Ora",
+          "composers": [],
+          "source": null,
+          "performer": "Orquesta del Tango de la Ciudad de Buenos Aires",
+          "style": "original",
+          "genres": []
+        }
+      ],
+      "expected": [
+        "Paya d'Ora",
+        [],
+        null,
+        "Orquesta del Tango de la Ciudad de Buenos Aires",
+        "title only"
+      ]
+    },
+    {
+      "id": 6033,
+      "raw": "Do You Love Me (Now That I Can Dance) by The Contours",
+      "title_qids": {
+        "Do You Love Me (Now That I Can Dance)": "Q5286352"
+      },
+      "model_pieces": [
+        {
+          "title": "Do You Love Me (Now That I Can Dance)",
+          "composers": [],
+          "source": null,
+          "performer": "The Contours",
+          "style": "original",
+          "genres": []
+        }
+      ],
+      "expected": [
+        "Do You Love Me (Now That I Can Dance)",
+        [],
+        null,
+        "The Contours",
+        "identified"
+      ]
+    },
+    {
+      "id": 839,
+      "raw": "The Impossible Dream (from Man of La Mancha ) by Mitch Leigh choreo. by Shae-Lynn Bourne and David Wilson",
+      "title_qids": {
+        "The Impossible Dream": "Q2318125",
+        "Man of La Mancha": "Q559584",
+        "Shae-Lynn Bourne": "Q469787"
+      },
+      "model_pieces": [
+        {
+          "title": "The Impossible Dream",
+          "composers": [
+            "Mitch Leigh"
+          ],
+          "source": "Man of La Mancha",
+          "performer": null,
+          "style": "original",
+          "genres": []
+        }
+      ],
+      "expected": [
+        "The Impossible Dream",
+        [
+          "Mitch Leigh"
+        ],
+        "Man of La Mancha",
+        null,
+        "identified"
+      ]
+    },
+    {
+      "id": 5543,
+      "raw": "\"Awakening\" · From Limelight Soundtrack",
+      "title_qids": {
+        "Limelight": "Q584509"
+      },
+      "model_pieces": [
+        {
+          "title": "Awakening",
+          "composers": [],
+          "source": "Limelight",
+          "performer": null,
+          "style": "original",
+          "genres": []
+        }
+      ],
+      "expected": [
+        "Awakening",
+        [],
+        "Limelight",
+        null,
+        "credited"
+      ]
+    },
+    {
+      "id": 6067,
+      "raw": "Le discours d'Arthur (from Le meilleur reste à venir ) by Jérôme Rebotier",
+      "title_qids": {
+        "Le meilleur reste à venir": "Q72842335"
+      },
+      "model_pieces": [
+        {
+          "title": "Le discours d'Arthur",
+          "composers": [],
+          "source": "Le meilleur reste à venir",
+          "performer": "Jérôme Rebotier",
+          "style": "original",
+          "genres": []
+        }
+      ],
+      "expected": [
+        "Le discours d'Arthur",
+        [
+          "Jérôme Rebotier"
+        ],
+        "Le meilleur reste à venir",
+        null,
+        "credited"
+      ]
+    },
+    {
+      "id": 7308,
+      "raw": "March: Clock Scene",
+      "title_qids": {},
+      "model_pieces": [
+        {
+          "title": "Clock Scene",
+          "composers": [],
+          "source": null,
+          "performer": null,
+          "style": "original",
+          "genres": []
+        }
+      ],
+      "expected": [
+        "Clock Scene",
+        [],
+        null,
+        null,
+        "title only"
+      ]
+    },
+    {
+      "id": 4467,
+      "raw": "Another Level by Tyrone Wells , Dustin Burnett performed by Oh the Larceny choreo. by Andrea Vaturi",
+      "title_qids": {
+        "Andrea Vaturi": "Q2634964"
+      },
+      "model_pieces": [
+        {
+          "title": "Another Level",
+          "composers": [
+            "Tyrone Wells",
+            "Dustin Burnett"
+          ],
+          "source": null,
+          "performer": "Oh the Larceny",
+          "style": "original",
+          "genres": []
+        }
+      ],
+      "expected": [
+        "Another Level",
+        [
+          "Tyrone Wells",
+          "Dustin Burnett"
+        ],
+        null,
+        "Oh the Larceny",
+        "credited"
+      ]
+    },
+    {
+      "id": 712,
+      "raw": "Jessica's Theme from Who Framed Roger Rabbit by Alan Silvestri",
+      "title_qids": {
+        "Who Framed Roger Rabbit": "Q379873"
+      },
+      "model_pieces": [
+        {
+          "title": "Jessica's Theme",
+          "composers": [
+            "Alan Silvestri"
+          ],
+          "source": "Who Framed Roger Rabbit",
+          "performer": null,
+          "style": "original",
+          "genres": []
+        }
+      ],
+      "expected": [
+        "Jessica's Theme",
+        [
+          "Alan Silvestri"
+        ],
+        "Who Framed Roger Rabbit",
+        null,
+        "credited"
+      ]
+    },
+    {
+      "id": 4837,
+      "raw": "The Immigrant",
+      "title_qids": {},
+      "model_pieces": [],
+      "expected": [
+        "The Immigrant",
+        [],
+        null,
+        null,
+        "title only"
+      ]
+    },
+    {
+      "id": 3456,
+      "raw": "Tango: Vuelvo al Sur by Medialuna Tango Project",
+      "title_qids": {},
+      "model_pieces": [
+        {
+          "title": "Vuelvo al Sur",
+          "composers": [],
+          "source": null,
+          "performer": "Medialuna Tango Project",
+          "style": "original",
+          "genres": [
+            "Tango"
+          ]
+        }
+      ],
+      "expected": [
+        "Vuelvo al Sur",
+        [],
+        null,
+        "Medialuna Tango Project",
+        "title only"
+      ]
+    },
+    {
+      "id": 260,
+      "raw": "The Phantom of the Opera by Andrew Lloyd Webber",
+      "title_qids": {
+        "Andrew Lloyd Webber": "Q180975"
+      },
+      "model_pieces": [
+        {
+          "title": "The Phantom of the Opera",
+          "composers": [
+            "Andrew Lloyd Webber"
+          ],
+          "source": null,
+          "performer": null,
+          "style": "original",
+          "genres": []
+        }
+      ],
+      "expected": [
+        "The Phantom of the Opera",
+        [
+          "Andrew Lloyd Webber"
+        ],
+        null,
+        null,
+        "credited"
+      ]
+    },
+    {
+      "id": 244,
+      "raw": "Another Brick in the Wall by Pink Floyd performed by the London Philharmonic Orchestra",
+      "title_qids": {},
+      "model_pieces": [
+        {
+          "title": "Another Brick in the Wall",
+          "composers": [],
+          "source": null,
+          "performer": "London Philharmonic Orchestra",
+          "style": "original",
+          "genres": []
+        }
+      ],
+      "expected": [
+        "Another Brick in the Wall",
+        [],
+        null,
+        "London Philharmonic Orchestra",
+        "title only"
+      ]
+    },
+    {
+      "id": 767,
+      "raw": "Nostradamus",
+      "title_qids": {},
+      "model_pieces": [
+        {
+          "title": "Nostradamus",
+          "composers": [],
+          "source": null,
+          "performer": null,
+          "style": "original",
+          "genres": []
+        }
+      ],
+      "expected": [
+        "Nostradamus",
+        [],
+        null,
+        null,
+        "title only"
+      ]
+    }
+  ],
+  "entities": {
+    "Q2318125": {
+      "composers": [
+        {
+          "name": "Mitch Leigh",
+          "qid": "Q1939469"
+        }
+      ]
+    },
+    "Q192941": {
+      "composers": [
+        {
+          "name": "Giacomo Puccini",
+          "qid": "Q7311"
+        }
+      ]
+    },
+    "Q178905": {
+      "composers": [
+        {
+          "name": "Freddie Mercury",
+          "qid": "Q15869"
+        }
+      ]
+    },
+    "Q5286352": {
+      "composers": []
+    },
+    "Q17001725": {
+      "composers": []
+    }
+  }
+}

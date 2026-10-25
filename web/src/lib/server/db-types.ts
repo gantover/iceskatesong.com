@@ -27,6 +27,19 @@ export type Numeric = ColumnType<string, number | string, number | string>;
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
+export interface Arrangements {
+  id: Generated<Int8>;
+  performer_id: Int8 | null;
+  piece_id: Int8;
+  style_id: Int8;
+}
+
+export interface Artists {
+  id: Generated<Int8>;
+  name: string;
+  search_key: Generated<string | null>;
+}
+
 export interface Competitions {
   city: string;
   end_date: Timestamp;
@@ -42,6 +55,11 @@ export interface FetchedPages {
   fetched_at: Timestamp;
   last_modified: string | null;
   url: string;
+}
+
+export interface Genres {
+  id: Generated<Int8>;
+  slug: string;
 }
 
 export interface ImportProblems {
@@ -73,11 +91,29 @@ export interface Keys {
 
 export interface MusicClaims {
   article_title: string | null;
+  entries: Generated<Json>;
   origin: string;
   program_id: Int8;
   raw_text: string;
   revision: Int8 | null;
   title_qids: Generated<Json>;
+}
+
+export interface MusicLlmCache {
+  created_at: Generated<Timestamp>;
+  kind: Generated<string>;
+  model: string;
+  raw_text: string;
+  result: Json;
+}
+
+export interface MusicOccurrences {
+  arrangement_id: Int8;
+  grade: string;
+  origin: string;
+  position: number;
+  program_id: Int8;
+  raw_text: string;
 }
 
 export interface Names {
@@ -116,6 +152,25 @@ export interface PerformanceVideos {
   youtube_id: string;
 }
 
+export interface PieceArtists {
+  artist_id: Int8;
+  origin: string;
+  piece_id: Int8;
+}
+
+export interface PieceGenres {
+  genre_id: Int8;
+  origin: string;
+  piece_id: Int8;
+}
+
+export interface Pieces {
+  id: Generated<Int8>;
+  search_key: Generated<string | null>;
+  source_id: Int8 | null;
+  title: string;
+}
+
 export interface Programs {
   id: Generated<Int8>;
   season: number;
@@ -141,6 +196,17 @@ export interface Skaters {
   nation: string;
 }
 
+export interface Sources {
+  id: Generated<Int8>;
+  name: string;
+  search_key: Generated<string | null>;
+}
+
+export interface Styles {
+  id: Generated<Int8>;
+  slug: string;
+}
+
 export interface Teams {
   id: Generated<Int8>;
   name: string;
@@ -162,18 +228,28 @@ export interface YoutubeVideos {
 }
 
 export interface DB {
+  arrangements: Arrangements;
+  artists: Artists;
   competitions: Competitions;
   fetched_pages: FetchedPages;
+  genres: Genres;
   import_problems: ImportProblems;
   imports: Imports;
   keys: Keys;
   music_claims: MusicClaims;
+  music_llm_cache: MusicLlmCache;
+  music_occurrences: MusicOccurrences;
   names: Names;
   performance_videos: PerformanceVideos;
   performances: Performances;
+  piece_artists: PieceArtists;
+  piece_genres: PieceGenres;
+  pieces: Pieces;
   programs: Programs;
   segments: Segments;
   skaters: Skaters;
+  sources: Sources;
+  styles: Styles;
   teams: Teams;
   youtube_videos: YoutubeVideos;
 }

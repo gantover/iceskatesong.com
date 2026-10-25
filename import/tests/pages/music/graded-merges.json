@@ -1,0 +1,581 @@
+{
+  "groups": [
+    {
+      "id": 758,
+      "entries": [
+        {
+          "id": 1137,
+          "raw": "Cha Cha by Santa Esmeralda",
+          "title_qids": {}
+        },
+        {
+          "id": 1201,
+          "raw": "Cha Cha by Manhattan Transfer",
+          "title_qids": {}
+        }
+      ]
+    },
+    {
+      "id": 814,
+      "entries": [
+        {
+          "id": 1221,
+          "raw": "Paxi Ni Ngongo by Bonga",
+          "title_qids": {}
+        },
+        {
+          "id": 2731,
+          "raw": "Paxi Ni Ngongo (from Don Juan musical)",
+          "title_qids": {}
+        }
+      ]
+    },
+    {
+      "id": 2325,
+      "entries": [
+        {
+          "id": 3578,
+          "raw": "What Love Can Be by Kingdom Come",
+          "title_qids": {
+            "What Love Can Be": "Q3815451"
+          }
+        },
+        {
+          "id": 3581,
+          "raw": "What Love Can Be by Kingdom Come",
+          "title_qids": {
+            "What Love Can Be": "Q3815451"
+          }
+        }
+      ]
+    },
+    {
+      "id": 2907,
+      "entries": [
+        {
+          "id": 4497,
+          "raw": "The Last Samurai \"A Way of Life\" \"Spectres in the Fog\" \"A Hard Teacher\" \"Red Warrior\" \"The Way of the Sword\" By Hans Zimmer Choreo. by Eiji Iwamoto",
+          "title_qids": {
+            "The Last Samurai": "Q207130",
+            "Hans Zimmer": "Q76364"
+          }
+        },
+        {
+          "id": 4499,
+          "raw": "\"Spectres in the Fog\"",
+          "title_qids": {}
+        }
+      ]
+    },
+    {
+      "id": 59,
+      "entries": [
+        {
+          "id": 73,
+          "raw": "The Umbrellas of Cherbourg by Michel Legrand choreo. by Sebastien Britten",
+          "title_qids": {
+            "The Umbrellas of Cherbourg": "Q163868",
+            "Michel Legrand": "Q313281"
+          }
+        },
+        {
+          "id": 3783,
+          "raw": "The Umbrellas of Cherbourg · Composed by Michel Legrand",
+          "title_qids": {
+            "The Umbrellas of Cherbourg": "Q163868"
+          }
+        },
+        {
+          "id": 7058,
+          "raw": "Umbrellas of Cherbourg performed by Peter Breiner & Peter Breiner Symphonic Pop Orchestra",
+          "title_qids": {}
+        },
+        {
+          "id": 7771,
+          "raw": "Les Parapluies de Cherbourg by Michel Legrand performed by Nana Mouskouri & Mario Pelchat choreo. by Maria Tumanovska-Chaika",
+          "title_qids": {
+            "Les Parapluies de Cherbourg": "Q163868",
+            "Michel Legrand": "Q313281"
+          }
+        }
+      ]
+    },
+    {
+      "id": 2637,
+      "entries": [
+        {
+          "id": 4073,
+          "raw": "Quickstep: Entr'acte",
+          "title_qids": {}
+        },
+        {
+          "id": 4982,
+          "raw": "Entr'acte by Andrew Lloyd Webber , Ramin Karimloo choreo. by Alex Chang",
+          "title_qids": {
+            "Andrew Lloyd Webber": "Q180975"
+          }
+        }
+      ]
+    },
+    {
+      "id": 625,
+      "entries": [
+        {
+          "id": 921,
+          "raw": "Korobushka by Bond",
+          "title_qids": {
+            "Korobushka": "Q642537"
+          }
+        },
+        {
+          "id": 3266,
+          "raw": "Korobushka by Bond",
+          "title_qids": {
+            "Korobushka": "Q642537"
+          }
+        },
+        {
+          "id": 6560,
+          "raw": "Khorobushko performed by Bond choreo. by Ilona Melnichenko",
+          "title_qids": {
+            "Ilona Melnichenko": "Q6001042"
+          }
+        }
+      ]
+    },
+    {
+      "id": 3843,
+      "entries": [
+        {
+          "id": 6288,
+          "raw": "Rhapsody on a Theme of Paganini Op. 43, Variations 11 & 8 by Sergei Rachmaninoff choreo. by Amanda Evora & Jim Peterson",
+          "title_qids": {
+            "Rhapsody on a Theme of Paganini": "Q1330443",
+            "Sergei Rachmaninoff": "Q131861"
+          }
+        },
+        {
+          "id": 6288,
+          "raw": "Rhapsody on a Theme of Paganini Op. 43, Variations 11 & 8 by Sergei Rachmaninoff choreo. by Amanda Evora & Jim Peterson",
+          "title_qids": {
+            "Rhapsody on a Theme of Paganini": "Q1330443",
+            "Sergei Rachmaninoff": "Q131861"
+          }
+        },
+        {
+          "id": 6304,
+          "raw": "Rhapsody on a Theme of Paganini Op. 43, Variations 11 & 8 by Sergei Rachmaninoff choreo. by Amanda Evora & Jim Peterson",
+          "title_qids": {
+            "Rhapsody on a Theme of Paganini": "Q1330443",
+            "Sergei Rachmaninoff": "Q131861"
+          }
+        },
+        {
+          "id": 6304,
+          "raw": "Rhapsody on a Theme of Paganini Op. 43, Variations 11 & 8 by Sergei Rachmaninoff choreo. by Amanda Evora & Jim Peterson",
+          "title_qids": {
+            "Rhapsody on a Theme of Paganini": "Q1330443",
+            "Sergei Rachmaninoff": "Q131861"
+          }
+        }
+      ]
+    },
+    {
+      "id": 3245,
+      "entries": [
+        {
+          "id": 5131,
+          "raw": "\" Human (Epic Cover)\" By Rag'n'Bone Man Performed by Really Slow Motion Choreo. by Ivan Righini",
+          "title_qids": {}
+        },
+        {
+          "id": 6506,
+          "raw": "Human by Rag'n'Bone Man choreo. by Alexander Stepin",
+          "title_qids": {}
+        }
+      ]
+    },
+    {
+      "id": 3768,
+      "entries": [
+        {
+          "id": 6083,
+          "raw": "\"Drink Up Me Hearties\"",
+          "title_qids": {}
+        },
+        {
+          "id": 6137,
+          "raw": "Drink Up Me Hearties Yo Ho (from Pirates of the Caribbean ) by Hans Zimmer choreo. by Alison Purkiss",
+          "title_qids": {
+            "Pirates of the Caribbean": "Q384426",
+            "Hans Zimmer": "Q76364"
+          }
+        }
+      ]
+    }
+  ],
+  "cache": [
+    {
+      "kind": "parse",
+      "raw_text": "Cha Cha by Manhattan Transfer",
+      "result": [
+        {
+          "style": "original",
+          "title": "Cha Cha",
+          "genres": [],
+          "source": null,
+          "composers": [],
+          "performer": "Manhattan Transfer"
+        }
+      ]
+    },
+    {
+      "kind": "parse",
+      "raw_text": "Cha Cha by Santa Esmeralda",
+      "result": [
+        {
+          "style": "original",
+          "title": "Cha Cha",
+          "genres": [],
+          "source": null,
+          "composers": [],
+          "performer": "Santa Esmeralda"
+        }
+      ]
+    },
+    {
+      "kind": "parse",
+      "raw_text": "\"Drink Up Me Hearties\"",
+      "result": [
+        {
+          "style": "original",
+          "title": "Drink Up Me Hearties",
+          "genres": [],
+          "source": null,
+          "composers": [],
+          "performer": null
+        }
+      ]
+    },
+    {
+      "kind": "parse",
+      "raw_text": "Drink Up Me Hearties Yo Ho (from Pirates of the Caribbean ) by Hans Zimmer choreo. by Alison Purkiss",
+      "result": [
+        {
+          "style": "original",
+          "title": "Drink Up Me Hearties Yo Ho",
+          "genres": [],
+          "source": "Pirates of the Caribbean",
+          "composers": [
+            "Hans Zimmer"
+          ],
+          "performer": null
+        }
+      ]
+    },
+    {
+      "kind": "parse",
+      "raw_text": "Entr'acte by Andrew Lloyd Webber , Ramin Karimloo choreo. by Alex Chang",
+      "result": [
+        {
+          "style": "original",
+          "title": "Entr'acte",
+          "genres": [],
+          "source": null,
+          "composers": [
+            "Andrew Lloyd Webber"
+          ],
+          "performer": null
+        }
+      ]
+    },
+    {
+      "kind": "parse",
+      "raw_text": "Human by Rag'n'Bone Man choreo. by Alexander Stepin",
+      "result": [
+        {
+          "style": "original",
+          "title": "Human",
+          "genres": [],
+          "source": null,
+          "composers": [],
+          "performer": "Rag'n'Bone Man"
+        }
+      ]
+    },
+    {
+      "kind": "parse",
+      "raw_text": "\" Human (Epic Cover)\" By Rag'n'Bone Man Performed by Really Slow Motion Choreo. by Ivan Righini",
+      "result": [
+        {
+          "style": "cover",
+          "title": "Human",
+          "genres": [],
+          "source": null,
+          "composers": [
+            "Rag'n'Bone Man"
+          ],
+          "performer": "Really Slow Motion"
+        }
+      ]
+    },
+    {
+      "kind": "parse",
+      "raw_text": "Khorobushko performed by Bond choreo. by Ilona Melnichenko",
+      "result": [
+        {
+          "style": "original",
+          "title": "Khorobushko",
+          "genres": [],
+          "source": null,
+          "composers": [],
+          "performer": "Bond"
+        }
+      ]
+    },
+    {
+      "kind": "parse",
+      "raw_text": "Korobushka by Bond",
+      "result": [
+        {
+          "style": "original",
+          "title": "Korobushka",
+          "genres": [],
+          "source": null,
+          "composers": [],
+          "performer": "Bond"
+        }
+      ]
+    },
+    {
+      "kind": "parse",
+      "raw_text": "Les Parapluies de Cherbourg by Michel Legrand performed by Nana Mouskouri & Mario Pelchat choreo. by Maria Tumanovska-Chaika",
+      "result": [
+        {
+          "style": "original",
+          "title": "Les Parapluies de Cherbourg",
+          "genres": [],
+          "source": null,
+          "composers": [
+            "Michel Legrand"
+          ],
+          "performer": "Nana Mouskouri & Mario Pelchat"
+        }
+      ]
+    },
+    {
+      "kind": "parse",
+      "raw_text": "Paxi Ni Ngongo by Bonga",
+      "result": [
+        {
+          "style": "original",
+          "title": "Paxi Ni Ngongo",
+          "genres": [],
+          "source": null,
+          "composers": [],
+          "performer": "Bonga"
+        }
+      ]
+    },
+    {
+      "kind": "parse",
+      "raw_text": "Paxi Ni Ngongo (from Don Juan musical)",
+      "result": [
+        {
+          "style": "original",
+          "title": "Paxi Ni Ngongo",
+          "genres": [],
+          "source": "Don Juan musical",
+          "composers": [],
+          "performer": null
+        }
+      ]
+    },
+    {
+      "kind": "parse",
+      "raw_text": "Quickstep: Entr'acte",
+      "result": [
+        {
+          "style": "original",
+          "title": "Entr'acte",
+          "genres": [],
+          "source": null,
+          "composers": [],
+          "performer": null
+        }
+      ]
+    },
+    {
+      "kind": "parse",
+      "raw_text": "Rhapsody on a Theme of Paganini Op. 43, Variations 11 & 8 by Sergei Rachmaninoff choreo. by Amanda Evora & Jim Peterson",
+      "result": [
+        {
+          "style": "original",
+          "title": "Variation 11",
+          "genres": [],
+          "source": null,
+          "composers": [
+            "Sergei Rachmaninoff"
+          ],
+          "performer": null
+        },
+        {
+          "style": "original",
+          "title": "Variation 8",
+          "genres": [],
+          "source": null,
+          "composers": [
+            "Sergei Rachmaninoff"
+          ],
+          "performer": null
+        }
+      ]
+    },
+    {
+      "kind": "parse",
+      "raw_text": "\"Spectres in the Fog\"",
+      "result": [
+        {
+          "style": "original",
+          "title": "Spectres in the Fog",
+          "genres": [],
+          "source": null,
+          "composers": [],
+          "performer": null
+        }
+      ]
+    },
+    {
+      "kind": "parse",
+      "raw_text": "The Last Samurai \"A Way of Life\" \"Spectres in the Fog\" \"A Hard Teacher\" \"Red Warrior\" \"The Way of the Sword\" By Hans Zimmer Choreo. by Eiji Iwamoto",
+      "result": [
+        {
+          "style": "original",
+          "title": "A Way of Life",
+          "genres": [],
+          "source": "The Last Samurai",
+          "composers": [
+            "Hans Zimmer"
+          ],
+          "performer": null
+        },
+        {
+          "style": "original",
+          "title": "Spectres in the Fog",
+          "genres": [],
+          "source": "The Last Samurai",
+          "composers": [
+            "Hans Zimmer"
+          ],
+          "performer": null
+        },
+        {
+          "style": "original",
+          "title": "A Hard Teacher",
+          "genres": [],
+          "source": "The Last Samurai",
+          "composers": [
+            "Hans Zimmer"
+          ],
+          "performer": null
+        },
+        {
+          "style": "original",
+          "title": "Red Warrior",
+          "genres": [],
+          "source": "The Last Samurai",
+          "composers": [
+            "Hans Zimmer"
+          ],
+          "performer": null
+        },
+        {
+          "style": "original",
+          "title": "The Way of the Sword",
+          "genres": [],
+          "source": "The Last Samurai",
+          "composers": [
+            "Hans Zimmer"
+          ],
+          "performer": null
+        }
+      ]
+    },
+    {
+      "kind": "parse",
+      "raw_text": "The Umbrellas of Cherbourg by Michel Legrand choreo. by Sebastien Britten",
+      "result": [
+        {
+          "style": "original",
+          "title": "The Umbrellas of Cherbourg",
+          "genres": [],
+          "source": null,
+          "composers": [
+            "Michel Legrand"
+          ],
+          "performer": null
+        }
+      ]
+    },
+    {
+      "kind": "parse",
+      "raw_text": "The Umbrellas of Cherbourg · Composed by Michel Legrand",
+      "result": [
+        {
+          "style": "original",
+          "title": "The Umbrellas of Cherbourg",
+          "genres": [],
+          "source": null,
+          "composers": [
+            "Michel Legrand"
+          ],
+          "performer": null
+        }
+      ]
+    },
+    {
+      "kind": "parse",
+      "raw_text": "Umbrellas of Cherbourg performed by Peter Breiner & Peter Breiner Symphonic Pop Orchestra",
+      "result": [
+        {
+          "style": "original",
+          "title": "Umbrellas of Cherbourg",
+          "genres": [],
+          "source": null,
+          "composers": [],
+          "performer": "Peter Breiner & Peter Breiner Symphonic Pop Orchestra"
+        }
+      ]
+    },
+    {
+      "kind": "parse",
+      "raw_text": "What Love Can Be by Kingdom Come",
+      "result": [
+        {
+          "style": "original",
+          "title": "What Love Can Be",
+          "genres": [],
+          "source": null,
+          "composers": [],
+          "performer": "Kingdom Come"
+        }
+      ]
+    }
+  ],
+  "entities": {
+    "Q163868": {
+      "composers": [
+        {
+          "name": "Michel Legrand",
+          "qid": "Q313281"
+        }
+      ]
+    },
+    "Q642537": {
+      "composers": []
+    },
+    "Q3815451": {
+      "composers": []
+    }
+  }
+}

@@ -7,12 +7,14 @@ import sys
 import time
 import traceback
 
+import anthropic
 import psycopg
 from psycopg.types.json import Jsonb
 
 import apply
 import fetch
 import isu
+import normalise
 import wikidata
 import wikipedia
 import youtube
@@ -48,7 +50,8 @@ def claim(conn) -> int | None:
 
 
 def run(conn, import_id: int, events_file: pathlib.Path, cache_dir: pathlib.Path, contact: str, interval=1.0,
-        wikidata_endpoint: str | None = None, youtube_api=None, wikipedia_endpoint: str | None = None) -> None:
+        wikidata_endpoint: str | None = None, youtube_api=None, wikipedia_endpoint: str | None = None,
+        music_client=None, music_spend_cap=10, music_entity_endpoint=None) -> None:
     """Run one claimed Import to `succeeded` or `failed`. `conn` must be in autocommit mode. No `wikidata_endpoint`: no Wikidata step.
     No `youtube_api` (a `youtube.api` GET): no YouTube fetch, and videos are matched from the cache as it is."""
     problems: list[dict] = []
@@ -82,6 +85,7 @@ def run(conn, import_id: int, events_file: pathlib.Path, cache_dir: pathlib.Path
             raise ImportFailed(f"{len(fetcher.failures)} of {fetcher.fetches} fetches failed")
         if youtube_api:
             youtube.fetch(conn, youtube_api, problems)
+        music = normalise.prepare(conn, fetcher, wikipedia_data, problems, music_client, music_spend_cap, music_entity_endpoint)
 
         with conn.transaction():
             conn.execute(IMPORT_LOCK)
@@ -90,6 +94,7 @@ def run(conn, import_id: int, events_file: pathlib.Path, cache_dir: pathlib.Path
                 counts |= wikidata.apply(conn, wikidata_items, problems)
             if wikipedia_data:
                 counts |= wikipedia.apply(conn, *wikipedia_data, problems)
+            counts |= normalise.apply(conn, music, problems)
             counts |= youtube.link(conn, problems)  # after the ISU apply: links only to Performances that exist
             finish(conn, import_id, "succeeded", problems, counts=counts)
     except Exception as e:
@@ -124,6 +129,8 @@ def main() -> None:
     events_file, cache_dir = here / "events.txt", here / "cache"  # cache/ is a Docker volume
     contact = os.environ.get("IMPORT_CONTACT_EMAIL", "")
     youtube_key = os.environ.get("YOUTUBE_API_KEY", "")
+    music_client = anthropic.Anthropic(max_retries=0, timeout=60) if os.environ.get("ANTHROPIC_API_KEY") else None
+    music_spend_cap = os.environ.get("MUSIC_SPEND_CAP_USD", "10")
     with psycopg.connect(os.environ["DATABASE_URL"], autocommit=True) as conn:
         mark_interrupted(conn)
         print("import: waiting for a pending Import", flush=True)
@@ -132,7 +139,8 @@ def main() -> None:
             if import_id:
                 print(f"import: running Import {import_id}", flush=True)
                 run(conn, import_id, events_file, cache_dir, contact, wikidata_endpoint=wikidata.ENDPOINT,
-                    youtube_api=youtube_key and youtube.api(youtube_key), wikipedia_endpoint=wikipedia.ENDPOINT)
+                    youtube_api=youtube_key and youtube.api(youtube_key), wikipedia_endpoint=wikipedia.ENDPOINT,
+                    music_client=music_client, music_spend_cap=music_spend_cap, music_entity_endpoint=normalise.ENTITY_ENDPOINT)
                 print(f"import: Import {import_id} finished", flush=True)
             else:
                 time.sleep(POLL_SECONDS)
