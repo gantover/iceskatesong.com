@@ -9,7 +9,7 @@
 	import SearchBox from '#lib/components/SearchBox.svelte';
 	import type { LayoutProps } from './$types';
 
-	let { children }: LayoutProps = $props();
+	let { children, data }: LayoutProps = $props();
 </script>
 
 <svelte:head>
@@ -32,3 +32,12 @@
 </header>
 
 {@render children()}
+
+<footer class="text-muted-foreground mx-auto mt-8 flex max-w-5xl flex-wrap items-center gap-x-5 gap-y-2 border-t px-4 py-5 text-sm">
+	<nav class="flex gap-4" aria-label="Legal">
+		<a href="/privacy" class="hover:underline">Privacy</a>
+		<a href="/terms" class="hover:underline">Terms</a>
+		<a href="/sources" class="hover:underline">Sources</a>
+	</nav>
+	<a href="mailto:{data.site.email}" class="break-all hover:underline">{data.site.email}</a>
+</footer>

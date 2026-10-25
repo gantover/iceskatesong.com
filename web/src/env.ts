@@ -2,6 +2,14 @@ import { building } from '$app/env';
 import { defineEnvVars } from '@sveltejs/kit/env';
 
 export const variables = defineEnvVars({
+	SITE_OPERATOR_NAME: {
+		description: 'Public operator name on the Privacy page',
+		schema: (value) => value || 'Damian Hubert'
+	},
+	SITE_CONTACT_EMAIL: {
+		description: 'Public contact email in the footer and legal pages',
+		schema: (value) => value || 'damian.b.hubert@gmail.com'
+	},
 	DATABASE_URL: {
 		description: 'Postgres connection URL',
 		// The Docker build has no database; the running app must have one.

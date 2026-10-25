@@ -40,6 +40,7 @@
 	<button
 		type="button"
 		onclick={() => (loaded = true)}
+		aria-describedby="youtube-privacy"
 		class="group flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-lg bg-neutral-900 p-4 text-center text-neutral-100"
 	>
 		<svg viewBox="0 0 68 48" class="h-12 w-16" aria-hidden="true">
@@ -50,10 +51,15 @@
 		{#if current.start_seconds === null}
 			<span class="text-xs text-neutral-400">Untimed full-segment stream: find this Performance in it yourself.</span>
 		{/if}
-		<span class="max-w-md text-xs text-neutral-400">
-			Plays from YouTube (youtube-nocookie.com). Nothing loads until you click; YouTube may then set cookies.
-		</span>
 	</button>
+{/if}
+
+{#if videos.length}
+	<p id="youtube-privacy" class="text-muted-foreground mt-2 text-xs">
+		Plays from YouTube (Google). On click, Google receives your IP address and may store data on your device.
+		By playing, you agree to the <a href="https://www.youtube.com/t/terms" class="underline">YouTube Terms</a>
+		and acknowledge our <a href="/privacy" class="underline">Privacy policy</a>.
+	</p>
 {/if}
 
 {#if videos.length > 1}

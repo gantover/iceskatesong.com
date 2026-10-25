@@ -45,6 +45,8 @@ services:
     environment:
       <<: *database-url
       ORIGIN: ${ORIGIN:-http://localhost:8080}
+      SITE_OPERATOR_NAME: ${SITE_OPERATOR_NAME:-Damian Hubert}
+      SITE_CONTACT_EMAIL: ${SITE_CONTACT_EMAIL:-}
       CF_ACCESS_TEAM_DOMAIN: ${CF_ACCESS_TEAM_DOMAIN:-}
       CF_ACCESS_AUD: ${CF_ACCESS_AUD:-}
     ports:
