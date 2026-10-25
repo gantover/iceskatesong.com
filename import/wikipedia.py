@@ -61,16 +61,18 @@ def music_entries(cell):
 
     if box := cell.select_one("div[style*='padding-top:0.2em']"):
         ordered = box.find("ol")
-        shared = ordered.find_next_sibling("ul") if ordered else box.find("ul")
+        title = box.find("div", style=re.compile("line-height"))
+        shared = next((ul for ul in box.find_all("ul") if not ul.find_parent("ol")), None)
         if ordered:
             entries = []
             for li in ordered.find_all("li", recursive=False):
-                nodes = [li]
+                if not text(li):
+                    continue
+                nodes = [li] + ([title] if title else [])
                 if shared:
                     nodes.append(shared)
                 entries.append(entry(nodes))
             return entries
-        title = box.find("div", style=re.compile("line-height"))
         if title:
             return [entry([title] + ([shared] if shared else []))]
     listed = [li for li in cell.find_all("li") if not li.find_parent("li")]

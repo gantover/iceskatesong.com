@@ -1,0 +1,20 @@
+{
+  "2907": {
+    "article": "Kao Miura",
+    "season": "2020–21",
+    "segment": "Free skate",
+    "html": "<td>\n<ul><li><i><a href=\"/wiki/The_Last_Samurai\" title=\"The Last Samurai\">The Last Samurai</a></i>\n<ul><li>\"A Way of Life\"</li>\n<li>\"Spectres in the Fog\"</li>\n<li>\"A Hard Teacher\"</li>\n<li>\"Red Warrior\"</li>\n<li>\"The Way of the Sword\"<br/><span style=\"font-size: 85%;\">By <a href=\"/wiki/Hans_Zimmer\" title=\"Hans Zimmer\">Hans Zimmer</a><br/>Choreo. by <a href=\"/wiki/Eiji_Iwamoto\" title=\"Eiji Iwamoto\">Eiji Iwamoto</a></span></li></ul></li></ul>\n</td>"
+  },
+  "3768": {
+    "article": "Lia Pereira",
+    "season": "2022–23",
+    "segment": "Free skate program",
+    "html": "<td rowspan=\"\"><div style=\"padding-top:0.2em; padding-bottom:0.2em;\">\n<div style=\"line-height:1.2;\"><i><a href=\"/wiki/Pirates_of_the_Caribbean:_At_World%27s_End_(soundtrack)\" title=\"Pirates of the Caribbean: At World's End (soundtrack)\">Pirates of the Caribbean</a></i></div>\n<div style=\"font-size:85%;\">\n<div style=\"line-height:1.2;\">\n<ul style=\"margin-left:1.5em; padding-top:0.3em;\">\n<li class=\"mw-empty-elt\"></li>\n<li class=\"mw-empty-elt\"></li>\n<li>Composed by <a href=\"/wiki/Hans_Zimmer\" title=\"Hans Zimmer\">Hans Zimmer</a></li>\n<li class=\"mw-empty-elt\"></li>\n<li class=\"mw-empty-elt\"></li>\n<li class=\"mw-empty-elt\"></li>\n<li>Choreo. by Alison Purkiss</li>\n</ul></div></div><div style=\"font-size:90%; line-height:1.3; padding-top:0.4em;\">\n<style data-mw-deduplicate=\"TemplateStyles:r1214851843\">.mw-parser-output .hidden-begin{box-sizing:border-box;width:100%;padding:5px;border:none;font-size:95%}.mw-parser-output .hidden-title{font-weight:bold;line-height:1.6;text-align:left}.mw-parser-output .hidden-content{text-align:left}@media all and (max-width:500px){.mw-parser-output .hidden-begin{width:auto!important;clear:none!important;float:none!important}}</style><div class=\"hidden-begin mw-collapsible mw-collapsed\" style=\"padding: 0px;\"><div class=\"hidden-title skin-nightmode-reset-color\" style=\"text-align:left; padding: 0px;\"><b>Tracks used</b></div><div class=\"hidden-content mw-collapsible-content\" style=\"text-align:left; padding: 0px;\"><ol style=\"margin-left:1.5em;\">\n<li>\"Singapore\"</li>\n<li>\"Drink Up Me Hearties\"</li>\n<li>\"Yo Ho\"</li>\n<li class=\"mw-empty-elt\"></li>\n<li class=\"mw-empty-elt\"></li>\n</ol></div></div></div></div>\n</td>"
+  },
+  "_source": {
+    "repository": "gantover/iceskatesong.com",
+    "commit": "69872af",
+    "path": "prototype/music-normaliser/cells.json",
+    "scope": "original program-table cells only"
+  }
+}

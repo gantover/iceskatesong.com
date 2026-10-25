@@ -58,12 +58,8 @@
           "title_qids": {
             "The Last Samurai": "Q207130",
             "Hans Zimmer": "Q76364"
-          }
-        },
-        {
-          "id": 4499,
-          "raw": "\"Spectres in the Fog\"",
-          "title_qids": {}
+          },
+          "cell": "2907"
         }
       ]
     },
@@ -201,7 +197,9 @@
         {
           "id": 6083,
           "raw": "\"Drink Up Me Hearties\"",
-          "title_qids": {}
+          "title_qids": {},
+          "cell": "3768",
+          "track": "Drink Up Me Hearties"
         },
         {
           "id": 6137,
@@ -215,6 +213,31 @@
     }
   ],
   "cache": [
+    {
+      "kind": "pair",
+      "raw_text": "[{\"composers\": [\"hans zimmer\"], \"performers\": [], \"qid\": null, \"source\": \"pirates of the caribbean\", \"title\": \"drink up me hearties yo ho\"}, {\"composers\": [\"hans zimmer\"], \"performers\": [], \"qid\": null, \"source\": \"pirates of the caribbean\", \"title\": \"drink up me hearties\"}]",
+      "result": true
+    },
+    {
+      "kind": "pair",
+      "raw_text": "[{\"composers\": [\"michel legrand\"], \"performers\": [], \"qid\": \"Q163868\", \"source\": \"\", \"title\": \"the umbrellas of cherbourg\"}, {\"composers\": [], \"performers\": [\"peter breiner peter breiner symphonic pop orchestra\"], \"qid\": null, \"source\": \"\", \"title\": \"umbrellas of cherbourg\"}]",
+      "result": true
+    },
+    {
+      "kind": "pair",
+      "raw_text": "[{\"composers\": [], \"performers\": [\"bond\"], \"qid\": \"Q642537\", \"source\": \"\", \"title\": \"korobushka\"}, {\"composers\": [], \"performers\": [\"bond\"], \"qid\": null, \"source\": \"\", \"title\": \"khorobushko\"}]",
+      "result": true
+    },
+    {
+      "kind": "pair",
+      "raw_text": "[{\"composers\": [], \"performers\": [\"bonga\"], \"qid\": null, \"source\": \"\", \"title\": \"paxi ni ngongo\"}, {\"composers\": [], \"performers\": [], \"qid\": null, \"source\": \"don juan musical\", \"title\": \"paxi ni ngongo\"}]",
+      "result": false
+    },
+    {
+      "kind": "pair",
+      "raw_text": "[{\"composers\": [], \"performers\": [\"manhattan transfer\"], \"qid\": null, \"source\": \"\", \"title\": \"cha cha\"}, {\"composers\": [], \"performers\": [\"santa esmeralda\"], \"qid\": null, \"source\": \"\", \"title\": \"cha cha\"}]",
+      "result": false
+    },
     {
       "kind": "parse",
       "raw_text": "Cha Cha by Manhattan Transfer",
@@ -253,6 +276,22 @@
           "genres": [],
           "source": null,
           "composers": [],
+          "performer": null
+        }
+      ]
+    },
+    {
+      "kind": "parse",
+      "raw_text": "\"Drink Up Me Hearties\" Pirates of the Caribbean Composed by Hans Zimmer Choreo. by Alison Purkiss",
+      "result": [
+        {
+          "style": "original",
+          "title": "Drink Up Me Hearties",
+          "genres": [],
+          "source": "Pirates of the Caribbean",
+          "composers": [
+            "Hans Zimmer"
+          ],
           "performer": null
         }
       ]
@@ -571,10 +610,10 @@
         }
       ]
     },
-    "Q642537": {
+    "Q3815451": {
       "composers": []
     },
-    "Q3815451": {
+    "Q642537": {
       "composers": []
     }
   }

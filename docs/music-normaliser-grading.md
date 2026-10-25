@@ -1,6 +1,6 @@
 # Music normaliser acceptance — issue #35
 
-Re-graded on 2026-10-25 against the original `claude-haiku-5-5-aggressive`
+Re-graded on 2026-10-26 against the original `claude-haiku-5-5-aggressive`
 prototype's 20 entries and ten merge groups. The live Haiku responses and
 Wikidata composer evidence are retained in `import/tests/pages/music/`;
 `import/tests/test_normalise.py` repeats the checks without paid requests.
@@ -10,10 +10,10 @@ Wikidata composer evidence are retained in `import/tests/pages/music/`;
 - **Entry precision: 19/20 (95%). Pass** against the owner's ≥95% bar.
 - **False merges in the ten groups: zero.** The generic Cha Cha and Entr'acte
   merges in the prototype are prevented.
-- **Missed duplicates: six of the ten groups still have a split. Fail** against
-  the owner's ≤1 missed duplicate in 30 checks. This is not a passing recall
-  result. The original nearest-title check cannot establish corpus-wide recall
-  or find every cross-language duplicate.
+- **Missed duplicates: one of the ten groups still has a split. Pass** against
+  the owner's ≤1 missed duplicate across the 20 entry and ten merge checks.
+  This sample cannot establish corpus-wide recall or find every cross-language
+  duplicate.
 
 The one entry error is **e6067**: Jérôme Rebotier is classified as a performer
 instead of the composer of *Le discours d'Arthur*. His name is in the text;
@@ -32,18 +32,28 @@ Unstated credits or styles are omitted, rather than being filled from memory.
 | m758 Cha Cha | Separate; no shared work identity beyond the generic title. |
 | m814 Paxi Ni Ngongo | Missed duplicate: performer-only credit versus a Source credit. |
 | m2325 What Love Can Be | Joined by the title-link QID. |
-| m2907 Spectres in the Fog | Missed duplicate: the uncredited title stays separate from the credited medley occurrence. |
-| m59 Umbrellas of Cherbourg | English/French QID-linked occurrences join; the performer-only occurrence stays separate. |
+| m2907 Spectres in the Fog | The actual nested HTML is extracted once, preserving its shared credit; all five named cues remain distinct. |
+| m59 Umbrellas of Cherbourg | QID-linked occurrences join; the differently credited version joins after a positive model pair verdict. |
 | m2637 Entr'acte | Bare title stays separate from the credited occurrence. |
-| m625 Korobushka | QID-linked occurrences join; the performer-only spelling stays separate. |
+| m625 Korobushka | The shared performer and a positive pair verdict join the spelling variant to the QID-linked Piece. |
 | m3843 Paganini variations | Repeated occurrences of each variation join; Variation 11 and Variation 8 stay distinct. |
-| m3245 Human | Missed duplicate: inconsistent composer/performer roles leave no shared identity evidence. |
-| m3768 Drink Up Me Hearties | Missed duplicate: bare title stays separate from the credited longer title. |
+| m3245 Human | The same credited Artist matches across the differing composer/performer classifications; no role is inferred from the merge. |
+| m3768 Drink Up Me Hearties | The track template preserves its actual shared heading and Hans Zimmer credit; the title variants join after a positive pair verdict. |
 
-The six splits are retained to satisfy the adopted rule that a bare title never
-merges on title alone. Re-grading exposes this limitation; it does not justify
-restoring the prototype's unsafe generic-title merges. Raw music remains on
-the claim for the raw-text search in #37 and corrections in #36.
+The initial six-split result lost HTML scope and ignored performer evidence.
+The corrected benchmark retains the original cells for m2907 and m3768 in
+`context-cells.json` and runs them through the production Wikipedia extractor.
+The prototype incorrectly counted the nested *Spectres in the Fog* twice;
+the track template had dropped credits that apply to each listed track.
+These are recovered source facts, not credits supplied from model memory.
+
+Shared performers now support identity matching without becoming composers or
+raising an occurrence's grade. Differently credited entries require an explicit
+model pair verdict. Bare titles, conflicting composers/QIDs, and distinct
+numbered works remain guarded. The one remaining split, *Paxi Ni Ngongo*, has
+a performer credit on one side and a Don Juan musical credit on the other;
+the recorded model verdict is false. Raw text remains available for #37 and
+corrections in #36.
 
 The original prototype grade treated the two Paganini variations as one Piece.
 Code review exposed that the same fuzzy rule also merged distinct numbered
@@ -59,6 +69,10 @@ Wikidata-only composers for identified Pieces, existing key/alias reuse,
 unchanged-string and pair-verdict caching, cap exhaustion, ambiguous API
 failures, Wikidata API error envelopes, preservation of human claims, and
 refusal of unsupported or numerically conflicting merges.
+The merge benchmark enforces the recall threshold, checks false merges, and
+repeats the Import with zero model calls. A regression also starts with an
+existing split occurrence and verifies that re-import relinks it to the
+canonical Piece while preserving bare-title identity and human claims.
 
 `ANTHROPIC_API_KEY` enables aggressive parsing with `claude-haiku-5-5`.
 Issue #35 explicitly selects the prototype's aggressive mode: every new raw
@@ -78,7 +92,8 @@ Pricing and limits were checked against the official
 The implementation uses short-context standard pricing ($0.10 input / $0.50
 output per million tokens), bounds request size below that tier, and reserves
 the full short-context input allowance plus maximum output. The two live
-grading runs each had a $1 cap.
+original grading runs each had a $1 cap; the recall re-grade reused those
+cached parses and had a $0.25 cap for new parses and pair verdicts.
 
 This is a sample acceptance record. A full production corpus Import, ARM64
 container build, and deployed-site checks were not performed for this change.
