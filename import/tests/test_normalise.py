@@ -198,6 +198,12 @@ def test_same_title_never_overrides_conflicting_or_missing_identity_evidence(con
     assert conn.execute("select count(distinct a.piece_id) from music_occurrences o join arrangements a on a.id = o.arrangement_id").fetchone()[0] == 2
 
 
+def test_similar_numbered_works_by_one_composer_stay_distinct(conn, tmp_path):
+    import_claim(conn, tmp_path, "Piano Concerto No. 1 by Composer")
+    import_claim(conn, tmp_path, "Piano Concerto No. 2 by Composer")
+    assert conn.execute("select count(distinct a.piece_id) from music_occurrences o join arrangements a on a.id = o.arrangement_id").fetchone()[0] == 2
+
+
 def test_medley_titles_can_repeat_the_work_name_and_use_each_named_variation():
     raw = "Rhapsody on a Theme of Paganini Op. 43, Variations 11 & 8 by Sergei Rachmaninoff"
     parsed = {"title": "Rhapsody on a Theme of Paganini, Variation 8", "composers": ["Sergei Rachmaninoff"]}
@@ -241,9 +247,17 @@ def test_ten_original_merge_groups_retain_strict_evidence_guards(conn, tmp_path,
     client = Claude()
     run_import(conn, tmp_path, client, entity_endpoint=site.url + "/entities")
     assert client.calls == []
-    expected = {758: 2, 814: 2, 2325: 1, 2907: 6, 59: 2, 2637: 2, 625: 2, 3843: 1, 3245: 2, 3768: 2}
+    expected = {758: 2, 814: 2, 2325: 1, 2907: 6, 59: 2, 2637: 2, 625: 2, 3843: 2, 3245: 2, 3768: 2}
     for group in sample["groups"]:
         count = conn.execute("""select count(distinct a.piece_id) from music_occurrences o
             join arrangements a on a.id = o.arrangement_id where o.program_id = any(%s)""",
             [[e["program"] for e in group["entries"]]]).fetchone()[0]
         assert count == expected[group["id"]], group["id"]
+
+
+def test_wikidata_error_envelope_logs_a_problem_without_failing_import(conn, tmp_path, site):
+    program, _ = import_claim(conn, tmp_path, "Tango by Composer")
+    conn.execute("update music_claims set title_qids = %s where program_id = %s", [Jsonb({"Tango": "Q123"}), program])
+    (site.root / "entities").write_text('{"error":{"code":"maxlag","info":"Waiting for replicas"}}')
+    id = run_import(conn, tmp_path, entity_endpoint=site.url + "/entities")
+    assert conn.execute("select kind from import_problems where import_id = %s", [id]).fetchall() == [("music Wikidata fetch failed",)]

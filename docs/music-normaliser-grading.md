@@ -36,7 +36,7 @@ Unstated credits or styles are omitted, rather than being filled from memory.
 | m59 Umbrellas of Cherbourg | English/French QID-linked occurrences join; the performer-only occurrence stays separate. |
 | m2637 Entr'acte | Bare title stays separate from the credited occurrence. |
 | m625 Korobushka | QID-linked occurrences join; the performer-only spelling stays separate. |
-| m3843 Paganini variations | Repeated occurrences join, matching the original owner's grading of these variations. |
+| m3843 Paganini variations | Repeated occurrences of each variation join; Variation 11 and Variation 8 stay distinct. |
 | m3245 Human | Missed duplicate: inconsistent composer/performer roles leave no shared identity evidence. |
 | m3768 Drink Up Me Hearties | Missed duplicate: bare title stays separate from the credited longer title. |
 
@@ -45,14 +45,26 @@ merges on title alone. Re-grading exposes this limitation; it does not justify
 restoring the prototype's unsafe generic-title merges. Raw music remains on
 the claim for the raw-text search in #37 and corrections in #36.
 
+The original prototype grade treated the two Paganini variations as one Piece.
+Code review exposed that the same fuzzy rule also merged distinct numbered
+concertos. The final matcher preserves the most specific named work from
+`GLOSSARY.md`: conflicting work/movement/variation numbers cannot merge by
+fuzzy title or a model pair verdict. The two distinct variations are therefore
+not counted as a missed duplicate in the final assessment.
+
 ## Runtime checks
 
 The integration tests cover ordered graded occurrences, independent grades,
 Wikidata-only composers for identified Pieces, existing key/alias reuse,
 unchanged-string and pair-verdict caching, cap exhaustion, ambiguous API
-failures, preservation of human claims, and refusal of unsupported merges.
+failures, Wikidata API error envelopes, preservation of human claims, and
+refusal of unsupported or numerically conflicting merges.
 
 `ANTHROPIC_API_KEY` enables aggressive parsing with `claude-haiku-5-5`.
+Issue #35 explicitly selects the prototype's aggressive mode: every new raw
+string is parsed by the model, even though the PRD's general pipeline shorthand
+describes a leftovers-only mode. Cached strings do not incur another request;
+rules still handle missing keys and named-title abstentions.
 `MUSIC_SPEND_CAP_USD` defaults to **$10 per Import**, above the prototype's
 rough $7 projection. Parse and pair requests share the budget. Requests
 reserve their maximum charge before sending, then refund known unused tokens;

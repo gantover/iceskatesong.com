@@ -190,7 +190,12 @@ class LLM:
 
 def entity_evidence(body):
     """Cache only work-composer claims and labels, excluding unrelated Wikidata personal data."""
-    entities = json.loads(body)["entities"]
+    try:
+        entities = json.loads(body)["entities"]
+        if not isinstance(entities, dict):
+            raise ValueError("invalid Wikidata entities response")
+    except (KeyError, TypeError) as e:
+        raise ValueError("invalid Wikidata entities response") from e
     result = {}
     for qid, entity in entities.items():
         if "missing" in entity:
@@ -242,6 +247,8 @@ def evidence(piece):
 def compatible(a, b):
     """A shared non-title signal is required, and neither known composer nor QID may conflict."""
     a, b = evidence(a), evidence(b)
+    if re.findall(r"\d+|\b[ivxlcdm]+\b", a["title"]) != re.findall(r"\d+|\b[ivxlcdm]+\b", b["title"]):
+        return False
     shared_composer = bool(set(a["composers"]) & set(b["composers"]))
     shared_source = bool(a["source"] and a["source"] == b["source"])
     return (shared_composer or shared_source) and not (
