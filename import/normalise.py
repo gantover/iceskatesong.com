@@ -293,6 +293,8 @@ def prepare(conn, fetcher, wikipedia_data, problems, client=None, spend_cap=10, 
     candidates, titles, seen = [], [], set()
     pairs = {raw for (raw,) in conn.execute("select raw_text from music_llm_cache where kind = 'pair' and result = 'true'::jsonb")}
     catalog = Writer(conn, entities)
+    active_piece_ids = {id for (id,) in conn.execute("""select distinct a.piece_id from music_occurrences o
+        join arrangements a on a.id = o.arrangement_id""")}
     known_titles = defaultdict(list)
     for pc in catalog.catalog.values():
         for title in pc["titles"]:
@@ -309,18 +311,22 @@ def prepare(conn, fetcher, wikipedia_data, problems, client=None, spend_cap=10, 
             if signature in seen:
                 continue
             seen.add(signature)
-            known = (p["qid"] and p["qid"] in catalog.by_qid) or any(
-                compatible(p, candidate) for candidate in known_titles[norm(p["title"])])
-            if not known:
-                for _, score, index in process.extract(norm(p["title"]), titles, scorer=fuzz.ratio, limit=8, score_cutoff=80):
-                    candidate = candidates[index]
-                    if p["qid"] and p["qid"] == candidate["qid"]:
-                        continue
-                    if compatible(p, candidate, shared=False) and (score < 92 or not compatible(p, candidate)):
-                        key = pair_key(p, candidate)
-                        if llm.ask("pair", key):
-                            pairs.add(key)
-            candidates.append(p)
+            known = catalog.by_qid.get(p["qid"]) or min(
+                (candidate for candidate in known_titles[norm(p["title"])] if compatible(p, candidate)),
+                key=lambda c: (not c["qid"], c["id"]), default=None)
+            for _, score, index in process.extract(norm(p["title"]), titles, scorer=fuzz.ratio, limit=8, score_cutoff=80):
+                candidate = candidates[index]
+                # Reconcile active splits once; unused historical aliases need no repeat paid comparison.
+                if known and candidate.get("id") is not None and (
+                        candidate["id"] == known["id"] or candidate["id"] not in active_piece_ids):
+                    continue
+                if p["qid"] and p["qid"] == candidate["qid"]:
+                    continue
+                if compatible(p, candidate, shared=False) and (score < 92 or not compatible(p, candidate)):
+                    key = pair_key(p, candidate)
+                    if llm.ask("pair", key):
+                        pairs.add(key)
+            candidates.append({**p, "id": known["id"] if known else None})
             titles.append(norm(p["title"]))
     return {"parsed": parsed, "entities": entities, "pairs": pairs}
 
@@ -380,7 +386,7 @@ class Writer:
         candidates = process.extract(norm(p["title"]), self.titles, scorer=fuzz.ratio, limit=8, score_cutoff=80) if (
             not match and (composers or p["source"] or p["performer"])) else []
         candidates = [(self.catalog[self.title_pieces[index]], score, self.titles[index]) for _, score, index in candidates]
-        candidates.sort(key=lambda c: (not c[0]["qid"], -c[1], c[0]["id"]))
+        candidates.sort(key=lambda c: (not c[0]["qid"], c[0]["id"], -c[1]))
         for pc, score, title in candidates:
             candidate = {**pc, "title": title}
             if compatible(p, candidate, shared=False) and (

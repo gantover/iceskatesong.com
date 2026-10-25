@@ -73,6 +73,11 @@ The merge benchmark enforces the recall threshold, checks false merges, and
 repeats the Import with zero model calls. A regression also starts with an
 existing split occurrence and verifies that re-import relinks it to the
 canonical Piece while preserving bare-title identity and human claims.
+This includes existing title variants that need their first model pair
+verdict: matching their own old aliases does not suppress reconciliation
+against another active Piece. Once reconciled, subsequent Imports make no
+new model calls. Unreferenced historical rows retain their keys and aliases;
+the Import relinks its music occurrences rather than deleting records.
 
 `ANTHROPIC_API_KEY` enables aggressive parsing with `claude-haiku-5-5`.
 Issue #35 explicitly selects the prototype's aggressive mode: every new raw

@@ -245,6 +245,23 @@ def test_reimport_relinks_a_previously_split_performer_occurrence(conn, tmp_path
     assert conn.execute("select count(distinct a.piece_id) from music_occurrences o join arrangements a on a.id = o.arrangement_id").fetchone()[0] == 1
 
 
+def test_existing_split_can_obtain_a_new_pair_verdict_once(conn, tmp_path):
+    client = Claude()
+    client.same_piece = False
+    import_claim(conn, tmp_path, "Drink Up Me Hearties (from Pirates of the Caribbean) by Hans Zimmer", client)
+    import_claim(conn, tmp_path, "Drink Up Me Hearties Yo Ho (from Pirates of the Caribbean) by Hans Zimmer", client)
+    assert conn.execute("select count(distinct a.piece_id) from music_occurrences o join arrangements a on a.id = o.arrangement_id").fetchone()[0] == 2
+    # Earlier Imports never requested this pair; their cached parses and split records already exist.
+    conn.execute("delete from music_llm_cache where kind = 'pair'")
+    client.calls.clear()
+    client.same_piece = True
+    run_import(conn, tmp_path, client)
+    assert len(client.calls) == 1
+    assert conn.execute("select count(distinct a.piece_id) from music_occurrences o join arrangements a on a.id = o.arrangement_id").fetchone()[0] == 1
+    run_import(conn, tmp_path, client)
+    assert len(client.calls) == 1
+
+
 def test_medley_titles_can_repeat_the_work_name_and_use_each_named_variation():
     raw = "Rhapsody on a Theme of Paganini Op. 43, Variations 11 & 8 by Sergei Rachmaninoff"
     parsed = {"title": "Rhapsody on a Theme of Paganini, Variation 8", "composers": ["Sergei Rachmaninoff"]}
