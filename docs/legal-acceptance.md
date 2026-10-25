@@ -1,7 +1,9 @@
 # R1 legal pages: acceptance check
 
 Checked 2026-10-25 for #38, using Playwright Chromium against a local development server and an isolated,
-migrated Postgres database. The public operator details are Damian Hubert and
+migrated Postgres database. Repeated on the combined #34/#38 production build with Wikipedia music
+claims in that disposable database; all seven page checks below passed again. The public operator
+details are Damian Hubert and
 `damian.b.hubert@gmail.com`, supplied by the owner. `SITE_OPERATOR_NAME` and `SITE_CONTACT_EMAIL` override
 those defaults at runtime.
 
@@ -24,6 +26,11 @@ player. Clicking the video created one `youtube-nocookie.com` iframe; the browse
 outgoing request so the check did not depend on YouTube availability. Client navigation through the
 Skater page to another Performance restored the unloaded placeholder with zero iframes.
 
+On the combined build, every displayed Wikipedia music entry linked its attributed article revision.
+The Skater page showed four linked entries and the Team page two, with one CC BY-SA 4.0, modified
+licence line per page. The Performance music card had its article/revision and licence links, and
+disabled "Wrong music?" and "Suggest music" actions. The exact ISU result link remained present.
+
 To repeat with any local fixture database:
 
 1. Migrate an isolated database and seed a Skater, Team, their Programs and Performances, including a
@@ -38,17 +45,18 @@ To repeat with any local fixture database:
    its iframe URL. Navigate using page links to a different Performance and require a fresh facade.
 
 The PRD excludes a browser test suite in R1; this is a recorded acceptance run, with existing server
-tests retained. `pnpm check` passed with zero errors and warnings; the existing web suite passed all
-23 tests.
+tests retained. `pnpm check` passed with zero errors and warnings; the combined web suite passed all
+24 tests, and the production build passed.
 
 ## Audit and remaining launch checks
 
 - Public components load their assets locally. The only remote asset URL is the YouTube iframe,
   created after a click. External attribution and policy links are ordinary navigation links.
 - Application code sets no cookies and has no date-of-birth or height profile fields. The appearance
-  toggle uses local storage, disclosed in Privacy. Cached source documents may contain unrelated
-  source material; it is not exposed as Skater profile data.
-- Wikipedia music attribution is implemented by #34 and must be checked again on the combined result.
+  toggle uses local storage, disclosed in Privacy. Wikipedia responses are reduced to raw program
+  tables, partnership context, follow links and attribution metadata before disk storage; biography
+  fields are excluded. Legacy cached articles are validated and reduced on read too.
+- Wikipedia music attribution passed the combined-build check described above.
 - A Piece page does not exist at this revision, so the Piece browser acceptance item cannot yet run.
   Repeat the same check when that page is implemented.
 - Local checks do not verify production Cloudflare settings. Ensure Access protects only `/admin`,

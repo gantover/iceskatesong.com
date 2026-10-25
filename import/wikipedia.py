@@ -91,6 +91,16 @@ def segment_type(header):
     return next((segment for segment in SEGMENTS if segment in header), None)
 
 
+def partner_of(table):
+    for heading in table.find_all_previous(re.compile(r"^h[2-6]$")):
+        label = text(heading)
+        if re.match(r"with\s+", label, re.I):
+            return re.sub(r"^with\s+", "", label, flags=re.I)
+        if heading.name == "h2":
+            break
+    return None
+
+
 def followed_notes(soup, title):
     """Eligible program-list/team pointers, excluding notes about background or individual music works."""
     for note in soup.select(".hatnote"):
@@ -124,15 +134,11 @@ def program_evidence(body, revision):
         if not in_programs and not recognized:
             continue
         fragments.append("<h2>Programs</h2>")
-        for heading in table.find_all_previous(re.compile(r"^h[2-6]$")):
-            if re.match(r"with\s+", text(heading), re.I):
-                # Only the partnership scope is needed; unrelated headings can carry biographical information.
-                scope = soup.new_tag("h3")
-                scope.string = text(heading)
-                fragments.append(str(scope))
-                break
-            if heading.name == "h2":
-                break
+        if partner := partner_of(table):
+            # Only the partnership scope is needed; unrelated headings can carry biographical information.
+            scope = soup.new_tag("h3")
+            scope.string = "With " + partner
+            fragments.append(str(scope))
         fragments.append(str(table))
     for links in followed_notes(soup, title):
         fragments.append('<h2>Programs</h2><div class="hatnote">Main article: ' + " ".join(str(a) for a, _ in links) + "</div>")
@@ -146,14 +152,7 @@ def parse(title, revision, html):
     rows = []
     for table in soup.select("table.wikitable"):
         headers = []
-        partner = None
-        for heading in table.find_all_previous(re.compile(r"^h[2-6]$")):
-            label = text(heading)
-            if re.match(r"with\s+", label, re.I):
-                partner = re.sub(r"^with\s+", "", label, flags=re.I)
-                break
-            if heading.name == "h2":
-                break
+        partner = partner_of(table)
         for cells in grid(table):
             if not cells:
                 continue
