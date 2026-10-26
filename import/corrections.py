@@ -1,6 +1,6 @@
 """The Corrections file (ADR 0002, R1): validated before the fetch, replayed on every Import.
 
-Every Import first reverts the previous replay (the undo journal, then every row of origin `corrections`), so the
+Every Import first reverts the previous replay (every row of origin `corrections`, then the undo journal), so the
 ISU, Wikidata and Wikipedia steps see the imported state, and then replays the whole file: deleting a line undoes it.
 """
 
@@ -11,11 +11,12 @@ import yaml
 from psycopg.types.json import Jsonb
 
 import normalise
+from isu import SEGMENT_TYPES
 
 DISCIPLINES = ("men", "women", "pairs", "ice dance")
 LEVELS = ("senior", "junior")
-SEGMENT_TYPES = ("short program", "free skating", "short dance", "rhythm dance", "free dance", "original dance",
-                 "compulsory dance")
+# Records a replay may create, journaled in this order so the revert deletes them backwards (references first).
+CREATED = ("sources", "artists", "genres", "styles", "pieces", "arrangements")
 
 
 class Invalid(Exception):
@@ -51,7 +52,7 @@ def load(path: pathlib.Path) -> dict:
     fixes = {"piece_aliases": data.get("piece_aliases") or [], "skater_merges": data.get("skater_merges") or {},
              "program_music": data.get("program_music") or [], "video_hides": data.get("video_hides") or []}
 
-    raws = set()
+    raws, defined = set(), set()
     for i, line in enumerate(listed("piece_aliases", fixes["piece_aliases"])):
         where = f"piece_aliases[{i}]"
         fields(where, line, ("raw", "piece"), ("title", "artists", "source", "genres"))
@@ -62,6 +63,9 @@ def load(path: pathlib.Path) -> dict:
         raws.add(line["raw"])
         if "title" in line:
             text(f"{where}.title", line["title"])
+            if line["piece"] in defined:
+                raise Invalid(f"{where}.piece: defined twice")
+            defined.add(line["piece"])
             for name in ("artists", "genres"):
                 for j, value in enumerate(listed(f"{where}.{name}", line.get(name, []))):
                     text(f"{where}.{name}[{j}]", value)
@@ -151,7 +155,7 @@ def text(where: str, value, empty=False) -> str:
     return value
 
 
-def one_of(where: str, value: str, choices: tuple) -> None:
+def one_of(where: str, value: str, choices) -> None:
     if value not in choices:
         raise Invalid(f"{where}: expected one of {', '.join(choices)}")
 
@@ -160,53 +164,53 @@ def problem(problems: list[dict], where: str, line, kind="corrections line with 
     problems.append({"step": "corrections", "kind": kind, "key": where, "detail": {"line": line}})
 
 
-def undo(conn, statement: str, *params) -> None:
+def record_undo(conn, statement: str, *params) -> None:
     conn.execute("insert into corrections_undo (statement, params) values (%s, %s)", [statement, Jsonb(list(params))])
 
 
 def revert(conn) -> None:
-    """Put back the imported state: run the undo journal backwards and drop every row of origin `corrections`."""
+    """Put back the imported state: drop every row of origin `corrections`, then run the undo journal backwards
+    (it deletes the records the replay created, which those rows reference)."""
+    for table in ("music_claims", "names", "piece_artists", "piece_genres"):
+        conn.execute(f"delete from {table} where origin = 'corrections'")
     for statement, params in conn.execute("select statement, params from corrections_undo order by id desc").fetchall():
         conn.execute(statement, params)
     conn.execute("delete from corrections_undo")
-    for table in ("music_claims", "names", "piece_artists", "piece_genres"):
-        conn.execute(f"delete from {table} where origin = 'corrections'")
 
 
 def apply(conn, fixes: dict, problems: list[dict]) -> None:
     """Replayed last, after every imported row exists: merges first, so later keys may name a merged-away slug."""
+    # The Import lock is held, so every row above these ids is one this replay created.
+    last = {table: conn.execute(f"select coalesce(max(id), 0) from {table}").fetchone()[0] for table in CREATED}
     for duplicate, survivor in fixes["skater_merges"].items():
-        ids = [slug_owner(conn, "skater", slug) for slug in (duplicate, survivor)]
-        if not all(ids):
+        owners = [slug_owner(conn, "skater", slug) for slug in (duplicate, survivor)]
+        if not all(owners):
             problem(problems, f"skater_merges.{duplicate}", {duplicate: survivor})
             continue
-        merge(conn, *ids)
+        merge(conn, *owners)
 
     writer = normalise.Writer(conn, {}, origin="corrections")
     aliases = {}
     for i, line in enumerate(fixes["piece_aliases"]):
         piece = slug_owner(conn, "piece", line["piece"])
-        if "title" in line and not piece:
+        if "title" in line:  # the line defines a new Piece; an existing one only takes the alias (ADR 0002)
             if conn.execute("select 1 from keys where system = 'slug' and value = %s", [line["piece"]]).fetchone():
                 problem(problems, f"piece_aliases[{i}].piece", line, kind="corrections slug taken by another record")
-                continue
-            piece = conn.execute("insert into pieces (title) values (%s) returning id", [line["title"]]).fetchone()[0]
-            writer.records.key("slug", line["piece"], "piece", piece)
+                if not piece:
+                    continue
+            else:
+                piece = conn.execute("insert into pieces (title, source_id) values (%s, %s) returning id",
+                    [line["title"], line.get("source") and writer.record("source", line["source"])]).fetchone()[0]
+                writer.records.key("slug", line["piece"], "piece", piece)
+                for name in line.get("artists", []):
+                    conn.execute("insert into piece_artists values (%s, %s, 'corrections') on conflict do nothing",
+                                 [piece, writer.record("artist", name)])
+                for genre in line.get("genres", []):
+                    conn.execute("insert into piece_genres values (%s, %s, 'corrections') on conflict do nothing",
+                                 [piece, writer.lookup("genres", genre)])
         if not piece:
             problem(problems, f"piece_aliases[{i}].piece", line)
             continue
-        if "title" in line:  # the line defines the Piece
-            source = line.get("source") and writer.record("source", line["source"])
-            old = conn.execute("""update pieces p set title = %s, source_id = coalesce(%s, p.source_id) from pieces old
-                                  where p.id = %s and old.id = p.id returning old.title, old.source_id""",
-                               [line["title"], source, piece]).fetchone()
-            undo(conn, "update pieces set title = %s, source_id = %s where id = %s", *old, piece)
-            for name in line.get("artists", []):
-                conn.execute("insert into piece_artists values (%s, %s, 'corrections') on conflict do nothing",
-                             [piece, writer.record("artist", name)])
-            for genre in line.get("genres", []):
-                conn.execute("insert into piece_genres values (%s, %s, 'corrections') on conflict do nothing",
-                             [piece, writer.lookup("genres", genre)])
         writer.name("piece", piece, line["raw"])
         aliases[line["raw"]] = piece
 
@@ -253,9 +257,9 @@ def apply(conn, fixes: dict, problems: list[dict]) -> None:
                 found.append(imported.pop(0))
             if entry in aliases:
                 found = [(writer.arrangement(aliases[entry], "original", None), normalise.piece_grade(conn, aliases[entry]), entry)]
-            for arrangement, grade, text in found:
+            for arrangement, grade, raw_text in found:
                 conn.execute("""insert into music_occurrences (program_id, origin, position, arrangement_id, grade, raw_text)
-                                values (%s, 'corrections', %s, %s, %s, %s)""", [program, position, arrangement, grade, text])
+                                values (%s, 'corrections', %s, %s, %s, %s)""", [program, position, arrangement, grade, raw_text])
                 position += 1
 
     for i, line in enumerate(fixes["video_hides"]):
@@ -273,7 +277,12 @@ def apply(conn, fixes: dict, problems: list[dict]) -> None:
             continue
         hidden = [id for id, status in links if status == "active"]
         conn.execute("update performance_videos set status = 'hidden' where id = any(%s)", [hidden])
-        undo(conn, "update performance_videos set status = 'active' where id = any(%s)", hidden)
+        record_undo(conn, "update performance_videos set status = 'active' where id = any(%s)", hidden)
+
+    for table in CREATED:
+        if created := ids(conn, f"select id from {table} where id > %s", last[table]):
+            record_undo(conn, f"delete from {table} where id = any(%s)", created)
+            record_undo(conn, "delete from keys where entity = %s and entity_id = any(%s)", table.removesuffix("s"), created)
 
 
 def slug_owner(conn, entity: str, slug: str) -> int | None:
@@ -286,17 +295,17 @@ def merge(conn, duplicate: int, survivor: int) -> None:
     The emptied duplicate row stays, so the journal can put everything back with plain updates."""
     for system, value in conn.execute("""update keys set entity_id = %s where entity = 'skater' and entity_id = %s
                                          returning system, value""", [survivor, duplicate]).fetchall():
-        undo(conn, "update keys set entity_id = %s where system = %s and value = %s", duplicate, system, value)
+        record_undo(conn, "update keys set entity_id = %s where system = %s and value = %s", duplicate, system, value)
     for name, origin in conn.execute("""insert into names (entity, entity_id, name, origin)
             select entity, %s, name, origin from names where entity = 'skater' and entity_id = %s
             on conflict do nothing returning name, origin""", [survivor, duplicate]).fetchall():
-        undo(conn, "delete from names where entity = 'skater' and entity_id = %s and name = %s and origin = %s", survivor, name, origin)
+        record_undo(conn, "delete from names where entity = 'skater' and entity_id = %s and name = %s and origin = %s", survivor, name, origin)
     for name, origin in conn.execute("delete from names where entity = 'skater' and entity_id = %s returning name, origin",
                                      [duplicate]).fetchall():
-        undo(conn, "insert into names (entity, entity_id, name, origin) values ('skater', %s, %s, %s)", duplicate, name, origin)
+        record_undo(conn, "insert into names (entity, entity_id, name, origin) values ('skater', %s, %s, %s)", duplicate, name, origin)
     for column in ("skater1_id", "skater2_id"):
         teams = ids(conn, f"update teams set {column} = %s where {column} = %s returning id", survivor, duplicate)
-        undo(conn, f"update teams set {column} = %s where id = any(%s)", duplicate, teams)
+        record_undo(conn, f"update teams set {column} = %s where id = any(%s)", duplicate, teams)
 
     for program, season, segment_type, seq in conn.execute(
             "select id, season, segment_type, seq from programs where skater_id = %s", [duplicate]).fetchall():
@@ -304,18 +313,18 @@ def merge(conn, duplicate: int, survivor: int) -> None:
                             [survivor, season, segment_type, seq]).fetchone()
         if not same:
             conn.execute("update programs set skater_id = %s where id = %s", [survivor, program])
-            undo(conn, "update programs set skater_id = %s where id = %s", duplicate, program)
+            record_undo(conn, "update programs set skater_id = %s where id = %s", duplicate, program)
             continue
         # Programs with the same key merge: Performances move, and music claims of an origin the survivor lacks.
         moved = ids(conn, "update performances set program_id = %s where program_id = %s returning id", same[0], program)
-        undo(conn, "update performances set program_id = %s where id = any(%s)", program, moved)
+        record_undo(conn, "update performances set program_id = %s where id = any(%s)", program, moved)
         origins = [origin for (origin,) in conn.execute("""update music_claims set program_id = %s where program_id = %s
             and origin not in (select origin from music_claims where program_id = %s) returning origin""",
             [same[0], program, same[0]])]
-        undo(conn, "update music_claims set program_id = %s where program_id = %s and origin = any(%s)", program, same[0], origins)
+        record_undo(conn, "update music_claims set program_id = %s where program_id = %s and origin = any(%s)", program, same[0], origins)
 
     moved = ids(conn, "update performances set skater_id = %s where skater_id = %s returning id", survivor, duplicate)
-    undo(conn, "update performances set skater_id = %s where id = any(%s)", duplicate, moved)
+    record_undo(conn, "update performances set skater_id = %s where id = any(%s)", duplicate, moved)
 
 
 def ids(conn, statement: str, *params) -> list[int]:

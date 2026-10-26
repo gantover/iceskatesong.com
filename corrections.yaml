@@ -7,7 +7,8 @@
 
 # A raw music string (one Wikipedia music entry, exactly as a "music string with no alias match" problem shows it)
 # -> a Piece slug: every Program whose Wikipedia music has that entry shows that Piece there instead. With a title, the
-# line defines the Piece under that slug (new, or replacing its title); Artists are its composers or songwriters.
+# line defines a new Piece under that slug (a slug already taken is logged, and the line only aliases); Artists are its
+# composers or songwriters.
 piece_aliases:
   # - raw: "Tango: Vuelvo al Sur by Medialuna Tango Project"
   #   piece: vuelvo-al-sur

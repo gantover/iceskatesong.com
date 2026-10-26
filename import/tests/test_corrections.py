@@ -26,7 +26,8 @@ def run_import(conn, site, tmp_path, fixes: str, events=(GPF,)):
 
 def unknown_keys(conn):
     return [key for (key,) in conn.execute(
-        "select key from import_problems where kind = 'corrections line with an unknown key' order by id")]
+        """select key from import_problems where kind = 'corrections line with an unknown key'
+           and import_id = (select max(id) from imports) order by id""")]
 
 
 @pytest.mark.parametrize("fixes, message", [
@@ -36,6 +37,7 @@ def unknown_keys(conn):
      " segment_type: free skating, entry: 00013665}\n", "video_hides[0].performance.entry: quote it"),
     ("skater_merges:\n  a: b\n  a: c\n", "duplicate key 'a'"),
     ("skater_merges:\n  a: b\n  b: c\n", "skater_merges: b is merged away and also a survivor"),
+    ("piece_aliases:\n  - {raw: a, piece: x, title: X}\n  - {raw: b, piece: x, title: Y}\n", "piece_aliases[1].piece: defined twice"),
 ])
 def test_an_invalid_file_fails_the_import_before_any_fetch(conn, site, tmp_path, fixes, message):
     status, error = run_import(conn, site, tmp_path, fixes)
@@ -85,7 +87,8 @@ def test_a_video_hide_survives_reimports_until_its_line_is_deleted(conn, site, t
 def contents(conn):
     """Every row a replay may touch, without xmin: a replay rewrites the rows it reverted."""
     tables = ["keys", "names", "skaters", "teams", "programs", "performances", "music_claims", "music_occurrences",
-              "performance_videos", "pieces", "piece_artists", "piece_genres"]
+              "performance_videos", "pieces", "piece_artists", "piece_genres", "artists", "sources", "genres", "styles",
+              "arrangements"]
     return {t: conn.execute(f"select array_agg(t::text order by t::text) from {t} t").fetchone()[0] for t in tables}
 
 
@@ -177,10 +180,11 @@ def test_program_music_sets_ordered_arrangements_graded_by_the_picked_pieces(con
     # An unknown Piece drops the whole line: a partial ordered list would be wrong.
     assert unknown_keys(conn) == ["program_music[1].program", "program_music[2].music[1].piece"]
     assert occurrences(conn, free, "corrections") == []
-    with_music = contents(conn)
+    with_music = occurrences(conn, short, "corrections")
 
+    # A replay recreates what it created, under new ids.
     run_import(conn, site, tmp_path, PROGRAM_MUSIC)
-    assert contents(conn) == with_music
+    assert occurrences(conn, short, "corrections") == with_music
 
     run_import(conn, site, tmp_path, "")
     assert contents(conn) == imported
@@ -218,35 +222,60 @@ def test_piece_aliases_repoint_wikipedia_entries_until_their_line_is_deleted(con
     imported, wikipedia = contents(conn), occurrences(conn, free, "wikipedia")
     assert [title for title, *_ in wikipedia] == ["Tango", "He is a Pirate", "Prelude"]
 
+    def assert_aliased():
+        # A corrections claim carries Wikipedia's text and attribution; aliased entries are graded by their Piece.
+        assert occurrences(conn, free, "corrections") == [
+            ("Bolero", "original", None, "title only"), ("He's a Pirate", "original", None, "credited"), wikipedia[2]]
+        assert conn.execute("select raw_text, article_title, revision from music_claims where origin = 'corrections'").fetchall() == [
+            ("Tango\nHe is a Pirate from Pirates\nPrelude by Composer", "Ilia Malinin", 7)]
+        assert occurrences(conn, free, "wikipedia") == wikipedia
+        assert conn.execute("""select s.name, array(select a.name from piece_artists pa join artists a on a.id = pa.artist_id
+                                                     where pa.piece_id = p.id), array(select g.slug from piece_genres pg
+                                                     join genres g on g.id = pg.genre_id where pg.piece_id = p.id)
+                               from pieces p join sources s on s.id = p.source_id where p.title = %s""", ["He's a Pirate"]).fetchall() == [
+            ("Pirates of the Caribbean", ["Klaus Badelt"], ["film"])]
+        # Only new Pieces are defined inline: an imported Piece keeps its title and Source, and still takes the alias.
+        assert conn.execute("select name from names where entity = 'piece' and entity_id = %s order by name", [bolero]).fetchall() == [
+            ("Ravel's Bolero",), ("Tango",)]
+        assert conn.execute("select title, source_id from pieces where id = %s", [bolero]).fetchone() == ("Bolero", None)
+        assert unknown_keys(conn) == ["piece_aliases[2].piece"]
+        assert conn.execute("select key from import_problems where kind = 'corrections slug taken by another record'"
+                            " and import_id = (select max(id) from imports) order by id").fetchall() == [
+            ("piece_aliases[3].piece",), ("piece_aliases[4].piece",)]
+
     assert run_import(conn, site, tmp_path, ALIASES) == ("succeeded", None)
-    # A corrections claim carries Wikipedia's text and attribution; aliased entries are graded by their Piece.
-    assert occurrences(conn, free, "corrections") == [
-        ("Boléro", "original", None, "credited"), ("He's a Pirate", "original", None, "credited"), wikipedia[2]]
-    assert conn.execute("select raw_text, article_title, revision from music_claims where origin = 'corrections'").fetchall() == [
-        ("Tango\nHe is a Pirate from Pirates\nPrelude by Composer", "Ilia Malinin", 7)]
-    assert occurrences(conn, free, "wikipedia") == wikipedia
-    assert conn.execute("""select s.name, array(select a.name from piece_artists pa join artists a on a.id = pa.artist_id
-                                                 where pa.piece_id = p.id), array(select g.slug from piece_genres pg
-                                                 join genres g on g.id = pg.genre_id where pg.piece_id = p.id)
-                           from pieces p join sources s on s.id = p.source_id where p.title = %s""", ["He's a Pirate"]).fetchall() == [
-        ("Pirates of the Caribbean", ["Klaus Badelt"], ["film"])]
-    assert conn.execute("select name from names where entity = 'piece' and entity_id = %s order by name", [bolero]).fetchall() == [
-        ("Ravel's Bolero",), ("Tango",)]
-    assert conn.execute("select p.title, s.name from pieces p join sources s on s.id = p.source_id where p.id = %s", [bolero]).fetchone() == (
-        "Boléro", "Ballets")
-    assert unknown_keys(conn) == ["piece_aliases[2].piece"]
-    assert conn.execute("select key from import_problems where kind = 'corrections slug taken by another record'").fetchall() == [
-        ("piece_aliases[3].piece",)]
-    with_aliases = contents(conn)
+    assert_aliased()
 
     run_import(conn, site, tmp_path, ALIASES)
-    assert contents(conn) == with_aliases
+    assert_aliased()
+
+    # Deleting the lines removes the Piece, Artist, Source and Genre they created, with their slugs.
+    run_import(conn, site, tmp_path, "")
+    assert contents(conn) == imported
+
+
+def test_a_defined_piece_yields_its_slug_to_the_imported_piece(conn, site, tmp_path):
+    run_import(conn, site, tmp_path, "")
+    define = """piece_aliases:
+  - raw: Pirates
+    piece: he-s-a-pirate
+    title: He's a Pirate!
+    source: Pirates of the Caribbean
+"""
+    run_import(conn, site, tmp_path, define)
+    conn.execute("""insert into music_claims (program_id, origin, raw_text, article_title, revision)
+                    values (%s, 'wikipedia', 'He''s a Pirate from Pirates of the Caribbean', 'Ilia Malinin', 1)""",
+                 [malinin_program(conn, "free skating")])
+    wikipedia_piece = """select p.title from music_occurrences o join arrangements a on a.id = o.arrangement_id
+                         join pieces p on p.id = a.piece_id where o.origin = 'wikipedia'"""
+
+    # The revert removes the file's Piece before the music step, so Wikipedia's entry creates its own Piece under
+    # that slug, and the file's definition is skipped: the line only aliases.
+    run_import(conn, site, tmp_path, define)
+    assert conn.execute(wikipedia_piece).fetchall() == [("He's a Pirate",)]
+    assert conn.execute("select key from import_problems where kind = 'corrections slug taken by another record'"
+                        " and import_id = (select max(id) from imports)").fetchall() == [("piece_aliases[0].piece",)]
 
     run_import(conn, site, tmp_path, "")
-    # The new Piece stays, unreferenced: slugs never change. Bolero gets its imported title back.
-    pirate = conn.execute("select entity_id from keys where system = 'slug' and value = 'he-s-a-pirate'").fetchone()[0]
-    restored = contents(conn)
-    for table, rows in (("pieces", f"({pirate},"), ("keys", "(slug,")):
-        restored[table] = [row for row in restored[table] if not row.startswith(rows)]
-        imported[table] = [row for row in imported[table] if not row.startswith(rows)]
-    assert restored == imported
+    assert conn.execute(wikipedia_piece).fetchall() == [("He's a Pirate",)]
+    assert conn.execute("select title from pieces where title like 'He%%'").fetchall() == [("He's a Pirate",)]
