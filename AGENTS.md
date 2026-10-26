@@ -11,6 +11,7 @@ Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-
 ### Domain docs
 
 Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+How built features behave, with the decisions behind them: `docs/corrections-file.md`, `docs/search.md`, `docs/music-normaliser-grading.md`. Update the matching page when you change one of those features.
 
 ### Worktrees
 

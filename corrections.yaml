@@ -4,6 +4,7 @@
 # it: deleting a line undoes its fix on the next Import. Git history is the audit trail. Records are named only by
 # their keys and slugs. A line whose key matches nothing is logged as "corrections line with an unknown key".
 # Quote values YAML could misread: 00013665 is an octal number and yes/no are booleans unquoted.
+# How each section behaves, and why: docs/corrections-file.md.
 
 # A raw music string (one Wikipedia music entry, exactly as a "music string with no alias match" problem shows it)
 # -> a Piece slug: every Program whose Wikipedia music has that entry shows that Piece there instead. With a title, the

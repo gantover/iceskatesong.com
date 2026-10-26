@@ -38,6 +38,7 @@ const matches = (key: string, query: string) =>
 /**
  * Skaters and Teams whose name or alias matches, and Pieces whose title, alias, Artist or Source matches,
  * accents and case ignored: from 3 characters a substring or a close spelling, below that the start of a word.
+ * How search, the Piece page and music lines behave, and why: docs/search.md.
  */
 export async function search(db: Kysely<DB>, query: string) {
 	const q = query.trim().slice(0, 100);

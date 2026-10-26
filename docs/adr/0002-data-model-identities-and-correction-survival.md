@@ -41,6 +41,8 @@ The Review Queue is a query over pending Submissions and open Flags, not a table
 
 Not every fix can be a separate origin-tagged row: a merge moves keys, aliases and Programs, a hide sets a video's status, and a new Piece is a record of its own. For those the R1 replay keeps an undo journal (`corrections_undo`). The next Import first drops the origin-tagged rows, then runs the journal backwards, which also deletes the records the file created. So a Piece the file defines is recreated under a new ID on every Import; its slug stays while the line does, and once an Import creates that Piece itself, the slug passes to the imported Piece and the line only aliases it. The journal goes away when the corrections move into the database ([#44](https://github.com/gantover/iceskatesong.com/issues/44)).
 
+A Piece alias is not an edit of Wikipedia's music: a bare title never re-matches across Programs, so an edited entry could not be restored when its line is deleted. Instead each affected Program gets its own `corrections` claim that copies Wikipedia's text, article and revision with the aliased entries repointed. That claim is written only for Programs with no Admin, corrections or Music Submission claim: an alias is Wikipedia's music with one fix, so it never outranks human-picked music, even though the corrections origin normally ranks above Music Submissions. How the file behaves in detail: [Corrections file: how it works](../corrections-file.md).
+
 At R2 it **moves into the DB**: a one-off step relabels its rows as Admin rows, writes one audit change per entry ("migrated from corrections file"), and deletes the file. After that there is one path for human fixes. Later bulk fixes are scripts that write audit changes.
 
 ## Audit log (R2)
