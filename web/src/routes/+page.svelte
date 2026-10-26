@@ -1,7 +1,7 @@
 <script lang="ts">
 	import SearchBox from '#lib/components/SearchBox.svelte';
 
-	const EXAMPLES = ['Kévin Aymoz', 'Kaori Sakamoto', 'Yuzuru Hanyu', 'Papadakis'];
+	const EXAMPLES = ['Kévin Aymoz', 'Kaori Sakamoto', 'Yuzuru Hanyu', 'Papadakis', "He's a Pirate"];
 </script>
 
 <svelte:head>

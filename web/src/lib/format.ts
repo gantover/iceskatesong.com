@@ -1,3 +1,5 @@
+import type { MusicHit } from './server/browse.js';
+
 /** A Season by its start year: 2025 → "2025–26". */
 export const seasonName = (season: number) => `${season}–${String(season + 1).slice(2)}`;
 
@@ -13,4 +15,10 @@ export function dateRange(start: string, end: string) {
 	const day = (d: string, options: Intl.DateTimeFormatOptions) =>
 		new Date(`${d}T00:00:00Z`).toLocaleDateString('en-GB', { timeZone: 'UTC', ...options });
 	return start === end ? day(end, { dateStyle: 'medium' }) : `${day(start, { day: 'numeric' })}–${day(end, { dateStyle: 'medium' })}`;
+}
+
+/** "15 Programs: 2 identified, 13 credited": how many Programs use a Piece, by grade. */
+export function gradeMix(hit: Pick<MusicHit, 'programs' | 'grades'>) {
+	const parts = (['identified', 'credited', 'title only'] as const).filter((g) => hit.grades[g]).map((g) => `${hit.grades[g]} ${g}`);
+	return `${hit.programs} Program${hit.programs === 1 ? '' : 's'}` + (parts.length ? `: ${parts.join(', ')}` : '');
 }

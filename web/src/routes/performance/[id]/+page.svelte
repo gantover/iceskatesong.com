@@ -1,4 +1,5 @@
 <script lang="ts">
+	import MusicPieces from '#lib/components/MusicPieces.svelte';
 	import VideoSlot from '#lib/components/VideoSlot.svelte';
 	import { dateRange, seasonName, segmentName } from '#lib/format.js';
 	import { wikipediaUrl } from '#lib/wikipedia.js';
@@ -27,7 +28,8 @@
 		<aside class="space-y-4">
 			<section class="bg-card rounded-lg border p-4">
 				<h2 class="text-muted-foreground text-xs tracking-wide uppercase">Music</h2>
-				<p class="mt-2 whitespace-pre-line text-sm">{p.music?.raw_text ?? 'Music not known yet'}</p>
+				<div class="mt-2 text-sm"><MusicPieces pieces={p.music?.pieces ?? []} /></div>
+				<p class="text-muted-foreground mt-2 whitespace-pre-line text-sm">{p.music?.raw_text ?? 'Music not known yet'}</p>
 				{#if p.music?.origin === 'wikipedia' && p.music.article_title}
 					<p class="text-muted-foreground mt-2 text-xs">
 						Music: <a href={wikipediaUrl(p.music.article_title, p.music.revision)} class="hover:underline">Wikipedia, {p.music.article_title}</a> ·

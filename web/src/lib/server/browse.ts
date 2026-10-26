@@ -6,25 +6,106 @@ export type Hit = { slug: string; name: string };
 // Public pages show only Import data, which changes when the Admin runs an Import.
 export const PUBLIC_CACHE = { 'cache-control': 'public, max-age=300' };
 
+export type Grade = 'identified' | 'credited' | 'title only';
+
+/** A Piece found by a music search, with how many Programs use it and how well each link is backed. */
+export type MusicHit = {
+	slug: string;
+	title: string;
+	/** Its Source, else its composers. */
+	credit: string | null;
+	programs: number;
+	grades: Partial<Record<Grade, number>>;
+};
+
+/** A Program whose music text matches a search though none of its Pieces does. */
+export type TextHit = Hit & { program_id: string; entity: 'skater' | 'team'; season: number; segment_type: string };
+
+// Best first.
+const GRADES = sql.lit('{identified,credited,title only}');
+
+// The query as a search_key (q) and as a LIKE pattern (esc).
+const searchQ = (q: string) => sql`q as (select q, replace(replace(replace(q, '\\', '\\\\'), '%', '\\%'), '_', '\\_') as esc
+	from f_unaccent(lower(${q})) as q)`;
+
+// From 3 characters a substring or a close spelling, below that the start of a word.
+const matches = (key: string) => sql`case when length(q) >= 3 then ${sql.ref(key)} like '%' || esc || '%' or q <% ${sql.ref(key)}
+	else ${sql.ref(key)} like esc || '%' or ${sql.ref(key)} like '% ' || esc || '%' end`;
+
 /**
- * Skaters and Teams whose name or alias matches, accents and case ignored: from 3 characters a substring
- * or a close spelling, below that the start of a word.
+ * Skaters and Teams whose name or alias matches, and Pieces whose title, alias, Artist or Source matches,
+ * accents and case ignored: from 3 characters a substring or a close spelling, below that the start of a word.
  */
 export async function search(db: Kysely<DB>, query: string) {
 	const q = query.trim().slice(0, 100);
-	if (!q) return { skaters: [], teams: [] };
+	if (!q) return { skaters: [], teams: [], music: [], text: [] };
+	// The matching Pieces as hit(piece_id, substring, similarity).
+	const pieceHits = sql`
+		named as (
+			select 'piece' as entity, id, search_key from pieces, q where ${matches('search_key')}
+			union all select 'artist', id, search_key from artists, q where ${matches('search_key')}
+			union all select 'source', id, search_key from sources, q where ${matches('search_key')}
+			union all select entity, entity_id, search_key from names, q
+				where entity in ('piece', 'artist', 'source') and ${matches('search_key')}
+		),
+		hit as (
+			-- An Artist or Source finds its Pieces. One row per Piece: its best-matching name.
+			select piece_id, max((search_key like '%' || esc || '%')::int) as substring, max(word_similarity(q, search_key)) as similarity
+			from (
+				select id as piece_id, search_key from named where entity = 'piece'
+				union all select pa.piece_id, named.search_key from named join piece_artists pa on pa.artist_id = named.id where entity = 'artist'
+				union all select a.piece_id, named.search_key from named join arrangements a on a.performer_id = named.id where entity = 'artist'
+				union all select p.id, named.search_key from named join pieces p on p.source_id = named.id where entity = 'source'
+			) found, q
+			group by piece_id
+		)`;
+	// The recall guarantee: music text that names what was searched, on Programs none of whose Pieces matched.
+	// The tsvector expression is the one migration 0007 indexes.
+	const { rows: text } = await sql<TextHit>`
+		with ${searchQ(q)}, ${pieceHits}
+		select m.program_id, case when pr.team_id is null then 'skater' else 'team' end as entity,
+			coalesce(s.name, t.name) as name, coalesce(${slugOf('skater', 's.id')}, ${slugOf('team', 't.id')}) as slug,
+			pr.season, pr.segment_type
+		from music_claims m
+		join programs pr on pr.id = m.program_id
+		left join skaters s on s.id = pr.skater_id
+		left join teams t on t.id = pr.team_id
+		where to_tsvector('english', m.raw_text) @@ websearch_to_tsquery('english', ${q})
+			and m.origin = ${topClaim('m.program_id')}
+			and exists (select from performances p where p.program_id = m.program_id and not p.gone)
+			and not exists (select from ${currentMusic} u join hit using (piece_id) where u.program_id = m.program_id)
+		order by ts_rank(to_tsvector('english', m.raw_text), websearch_to_tsquery('english', ${q})) desc, pr.season desc, m.program_id
+		limit 8
+	`.execute(db);
+	const { rows: music } = await sql<MusicHit>`
+		with ${searchQ(q)}, ${pieceHits},
+		used as (
+			-- One grade per Program and Piece: its best.
+			select u.piece_id, u.program_id, min(array_position(${GRADES}::text[], u.grade)) as best
+			from ${currentMusic} u join hit using (piece_id)
+			group by u.piece_id, u.program_id
+		)
+		select ${slugOf('piece', 'p.id')} as slug, p.title,
+			coalesce(s.name, (select string_agg(distinct a.name, ', ') from piece_artists pa join artists a on a.id = pa.artist_id
+				where pa.piece_id = p.id)) as credit,
+			(select count(*) from used where used.piece_id = p.id)::int as programs,
+			(select coalesce(json_object_agg((${GRADES}::text[])[best], n), '{}') from (
+				select best, count(*)::int as n from used where used.piece_id = p.id group by best) g) as grades
+		from hit
+		join pieces p on p.id = hit.piece_id
+		left join sources s on s.id = p.source_id
+		order by substring desc, similarity desc, programs desc, p.title
+		limit 8
+	`.execute(db);
 	const { rows } = await sql<Hit & { entity: 'skater' | 'team' }>`
-		with q as (select q, replace(replace(replace(q, '\\', '\\\\'), '%', '\\%'), '_', '\\_') as esc
-			from f_unaccent(lower(${q})) as q),
+		with ${searchQ(q)},
 		hit as (
 			-- One row per record: its best-matching name. Substring matches rank above close spellings.
 			select entity, entity_id,
 				max((search_key like '%' || esc || '%')::int) as substring,
 				max(word_similarity(q, search_key)) as similarity
 			from names, q
-			where entity in ('skater', 'team')
-				and case when length(q) >= 3 then search_key like '%' || esc || '%' or q <% search_key
-					else search_key like esc || '%' or search_key like '% ' || esc || '%' end
+			where entity in ('skater', 'team') and ${matches('search_key')}
 			group by entity, entity_id
 		)
 		select entity, name, slug from (
@@ -40,7 +121,9 @@ export async function search(db: Kysely<DB>, query: string) {
 	`.execute(db);
 	return {
 		skaters: rows.filter((r) => r.entity === 'skater').map(({ slug, name }) => ({ slug, name })),
-		teams: rows.filter((r) => r.entity === 'team').map(({ slug, name }) => ({ slug, name }))
+		teams: rows.filter((r) => r.entity === 'team').map(({ slug, name }) => ({ slug, name })),
+		music,
+		text
 	};
 }
 
@@ -61,25 +144,43 @@ const SEGMENT_ORDER = sql.lit(
 );
 
 // Merges (R2) can leave a record with several slugs: link the same one every time.
-const slugOf = (entity: 'skater' | 'team', id: string) =>
+const slugOf = (entity: 'skater' | 'team' | 'piece', id: string) =>
 	sql<string>`(select min(value) from keys k where k.system = 'slug' and k.entity = ${entity} and k.entity_id = ${sql.ref(id)})`;
+
+/** A music line: the Pieces of one music claim in order, each with its grade. */
+export type PieceUse = { slug: string; title: string; grade: Grade };
 
 export type MusicClaim = {
 	raw_text: string;
 	origin: string;
 	article_title: string | null;
 	revision: string | null;
+	pieces: PieceUse[];
 };
+
+// A Program's music is its highest-precedence claim (ADR 0002).
+const topClaim = (program: string) => sql`(select m.origin from music_claims m where m.program_id = ${sql.ref(program)}
+	order by array_position('{admin,corrections,submitted,wikipedia,isu}'::text[], m.origin) limit 1)`;
 
 const musicOf = (program: string) => sql<MusicClaim | null>`(
 	select json_build_object('raw_text', m.raw_text, 'origin', m.origin,
-		'article_title', m.article_title, 'revision', m.revision::text)
-	from music_claims m where m.program_id = ${sql.ref(program)}
-	order by array_position('{admin,corrections,submitted,wikipedia,isu}'::text[], m.origin)
-	limit 1
+		'article_title', m.article_title, 'revision', m.revision::text,
+		'pieces', (select coalesce(json_agg(json_build_object('slug', ${slugOf('piece', 'a.piece_id')}, 'title', pc.title, 'grade', o.grade)
+				order by o.position), '[]')
+			from music_occurrences o join arrangements a on a.id = o.arrangement_id join pieces pc on pc.id = a.piece_id
+			where o.program_id = m.program_id and o.origin = m.origin))
+	from music_claims m where m.program_id = ${sql.ref(program)} and m.origin = ${topClaim(program)}
 )`;
 
-async function idBySlug(db: Kysely<DB>, entity: 'skater' | 'team', slug: string) {
+/** Each Program's Pieces from its winning claim, for Programs with a Performance not marked gone. */
+const currentMusic = sql`(
+	select o.program_id, o.origin, o.position, o.grade, o.raw_text, a.piece_id
+	from music_occurrences o join arrangements a on a.id = o.arrangement_id
+	where o.origin = ${topClaim('o.program_id')}
+		and exists (select from performances p where p.program_id = o.program_id and not p.gone)
+)`;
+
+async function idBySlug(db: Kysely<DB>, entity: 'skater' | 'team' | 'piece', slug: string) {
 	const row = await db
 		.selectFrom('keys')
 		.select('entity_id')
@@ -208,6 +309,64 @@ export async function performancePage(db: Kysely<DB>, id: string) {
 		.execute();
 	const sameProgram = await performanceRows(db, sql`p.program_id = ${performance.program_id} and p.id <> ${id}`);
 	return { performance, videos: playOrder(videos), sameProgram };
+}
+
+export type PieceProgram = {
+	id: string;
+	season: number;
+	segment_type: string;
+	/** The best grade among the Program's entries naming the Piece. */
+	grade: Grade;
+	/** Those entries' raw text. */
+	raw_text: string;
+	origin: string;
+	article_title: string | null;
+	revision: string | null;
+	performances: { id: string; competition: string; rank: number | null; rank_label: string | null; video: boolean }[];
+};
+
+/**
+ * A Piece and the Programs using it, grouped by Skater or Team, newest Season first, each with its
+ * Performances not marked gone; undefined for an unknown slug.
+ */
+export async function piecePage(db: Kysely<DB>, slug: string) {
+	const id = await idBySlug(db, 'piece', slug);
+	if (!id) return undefined;
+	const { rows: pieces } = await sql<{ title: string; slug: string; source: string | null; qid: string | null; composers: string[] }>`
+		select p.title, ${slugOf('piece', 'p.id')} as slug, s.name as source,
+			(select value from keys k where k.system = 'wikidata' and k.entity = 'piece' and k.entity_id = p.id) as qid,
+			array(select distinct a.name from piece_artists pa join artists a on a.id = pa.artist_id where pa.piece_id = p.id order by a.name) as composers
+		from pieces p left join sources s on s.id = p.source_id
+		where p.id = ${id}
+	`.execute(db);
+	const { rows } = await sql<PieceProgram & Hit & { entity: 'skater' | 'team' }>`
+		select pr.id, pr.season, pr.segment_type,
+			case when pr.team_id is null then 'skater' else 'team' end as entity,
+			coalesce(s.name, t.name) as name, coalesce(${slugOf('skater', 's.id')}, ${slugOf('team', 't.id')}) as slug,
+			(${GRADES}::text[])[min(array_position(${GRADES}::text[], u.grade))] as grade,
+			string_agg(distinct u.raw_text, E'\n') as raw_text,
+			m.origin, m.article_title, m.revision::text as revision,
+			(select json_agg(json_build_object('id', p.id::text, 'competition', c.name, 'rank', p.rank, 'rank_label', p.rank_label,
+					'video', exists (select from performance_videos v where v.performance_id = p.id and v.status = 'active'))
+				order by c.start_date, p.id)
+			from performances p join segments sg on sg.id = p.segment_id join competitions c on c.id = sg.competition_id
+			where p.program_id = pr.id and not p.gone) as performances
+		from ${currentMusic} u
+		join programs pr on pr.id = u.program_id
+		join music_claims m on m.program_id = u.program_id and m.origin = u.origin
+		left join skaters s on s.id = pr.skater_id
+		left join teams t on t.id = pr.team_id
+		where u.piece_id = ${id}
+		group by pr.id, m.program_id, m.origin, s.id, t.id
+		order by pr.season desc, name, array_position(${SEGMENT_ORDER}::text[], pr.segment_type)
+	`.execute(db);
+	const owners = new Map<string, Hit & { entity: 'skater' | 'team'; programs: PieceProgram[] }>();
+	for (const { entity, slug, name, ...program } of rows) {
+		const key = `${entity}/${slug}`;
+		if (!owners.has(key)) owners.set(key, { entity, slug, name, programs: [] });
+		owners.get(key)!.programs.push(program);
+	}
+	return { piece: pieces[0], owners: [...owners.values()] };
 }
 
 /** The Season tabs of a career, newest first, and the rows of the one in the URL (else the newest); undefined for a Season not in it. */

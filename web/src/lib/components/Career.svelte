@@ -2,6 +2,7 @@
 	import type { PerformanceRow } from '#lib/server/browse.js';
 	import { dateRange, seasonName, segmentName } from '#lib/format.js';
 	import { cn } from '#lib/utils.js';
+	import MusicPieces from './MusicPieces.svelte';
 	import { wikipediaUrl } from '#lib/wikipedia.js';
 
 	/** Season tabs linking to `{base}/{season}`, and the chosen Season's Competitions, one row per Segment. */
@@ -55,12 +56,15 @@
 							{#if p.rank_label}{p.rank_label}{:else}<strong>{p.rank ?? '–'}</strong>
 								<span class="text-muted-foreground text-sm">{p.tss ?? ''}</span>{/if}
 						</span>
-						{#if p.music?.origin === 'wikipedia' && p.music.article_title}
-							<a href={wikipediaUrl(p.music.article_title, p.music.revision)} title="Music: Wikipedia, {p.music.article_title}"
-								class="text-muted-foreground whitespace-pre-line text-sm hover:underline">{p.music.raw_text} ↗</a>
-						{:else}
-							<span class="text-muted-foreground whitespace-pre-line text-sm">{p.music?.raw_text ?? 'Music not known yet'}</span>
-						{/if}
+						<div class="text-sm">
+							<MusicPieces pieces={p.music?.pieces ?? []} />
+							{#if p.music?.origin === 'wikipedia' && p.music.article_title}
+								<a href={wikipediaUrl(p.music.article_title, p.music.revision)} title="Music: Wikipedia, {p.music.article_title}"
+									class="text-muted-foreground whitespace-pre-line hover:underline">{p.music.raw_text} ↗</a>
+							{:else}
+								<span class="text-muted-foreground whitespace-pre-line">{p.music?.raw_text ?? 'Music not known yet'}</span>
+							{/if}
+						</div>
 						<a href="/performance/{p.id}" class={cn('text-sm hover:underline sm:text-right', p.video ? 'text-primary' : 'text-muted-foreground')}>
 							{p.video ? '▶ video' : 'no video'}
 					</a>
