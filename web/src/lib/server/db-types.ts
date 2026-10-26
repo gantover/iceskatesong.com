@@ -49,6 +49,12 @@ export interface Competitions {
   start_date: Timestamp;
 }
 
+export interface CorrectionsUndo {
+  id: Generated<Int8>;
+  params: Json;
+  statement: string;
+}
+
 export interface FetchedPages {
   body_sha256: string;
   etag: string | null;
@@ -231,6 +237,7 @@ export interface DB {
   arrangements: Arrangements;
   artists: Artists;
   competitions: Competitions;
+  corrections_undo: CorrectionsUndo;
   fetched_pages: FetchedPages;
   genres: Genres;
   import_problems: ImportProblems;

@@ -1,13 +1,13 @@
 """Corrections file: the undo journal of its last replay, and music claims that can move between Programs.
 
-Revision ID: 0007
-Revises: 0006
+Revision ID: 0008
+Revises: 0007
 """
 
 from alembic import op
 
-revision = "0007"
-down_revision = "0006"
+revision = "0008"
+down_revision = "0007"
 
 
 def upgrade() -> None:
