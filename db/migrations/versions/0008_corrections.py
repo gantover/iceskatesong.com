@@ -12,8 +12,8 @@ down_revision = "0007"
 
 def upgrade() -> None:
     op.execute("""
-        -- R1 only: the statements that put back what the last corrections replay moved (merges, hides).
-        -- The next Import runs them in reverse id order before it applies anything, then replays the file again.
+        -- R1 only: the statements that put back what the last corrections replay moved or created (merges, hides,
+        -- new records). The next Import deletes the corrections-origin rows, runs these in reverse id order, then replays the file.
         create table corrections_undo (
           id bigint generated always as identity primary key,
           statement text not null,
