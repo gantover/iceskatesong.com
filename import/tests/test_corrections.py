@@ -92,6 +92,10 @@ def contents(conn):
     return {t: conn.execute(f"select array_agg(t::text order by t::text) from {t} t").fetchone()[0] for t in tables}
 
 
+def row_counts(conn):
+    return {table: len(rows or []) for table, rows in contents(conn).items()}
+
+
 def slug_owner(conn, slug):
     return conn.execute("select entity_id from keys where system = 'slug' and value = %s", [slug]).fetchone()[0]
 
@@ -180,11 +184,11 @@ def test_program_music_sets_ordered_arrangements_graded_by_the_picked_pieces(con
     # An unknown Piece drops the whole line: a partial ordered list would be wrong.
     assert unknown_keys(conn) == ["program_music[1].program", "program_music[2].music[1].piece"]
     assert occurrences(conn, free, "corrections") == []
-    with_music = occurrences(conn, short, "corrections")
+    with_music = occurrences(conn, short, "corrections"), row_counts(conn)
 
-    # A replay recreates what it created, under new ids.
+    # A replay recreates what it created, under new ids, and piles nothing up.
     run_import(conn, site, tmp_path, PROGRAM_MUSIC)
-    assert occurrences(conn, short, "corrections") == with_music
+    assert (occurrences(conn, short, "corrections"), row_counts(conn)) == with_music
 
     run_import(conn, site, tmp_path, "")
     assert contents(conn) == imported
@@ -245,9 +249,12 @@ def test_piece_aliases_repoint_wikipedia_entries_until_their_line_is_deleted(con
 
     assert run_import(conn, site, tmp_path, ALIASES) == ("succeeded", None)
     assert_aliased()
+    with_aliases = row_counts(conn)
 
+    # A replay recreates what it created, under new ids, and piles nothing up.
     run_import(conn, site, tmp_path, ALIASES)
     assert_aliased()
+    assert row_counts(conn) == with_aliases
 
     # Deleting the lines removes the Piece, Artist, Source and Genre they created, with their slugs.
     run_import(conn, site, tmp_path, "")
