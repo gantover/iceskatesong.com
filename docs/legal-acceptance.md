@@ -48,6 +48,30 @@ The PRD excludes a browser test suite in R1; this is a recorded acceptance run, 
 tests retained. `pnpm check` passed with zero errors and warnings; the combined web suite passed all
 24 tests, and the production build passed.
 
+## Piece page and music lines (#37)
+
+Checked 2026-10-26 with Playwright Chromium against `pnpm dev` on an isolated, migrated fixture database
+(a Skater, a Team, a Piece with a Wikidata key, a Wikipedia claim, a `corrections` claim that carries
+Wikipedia's article and revision, an unmatched Wikipedia text, and one official video). Each page opened
+in a fresh browser context:
+
+| Page | HTTP status | Third-party requests before a video click | Cookies | Initial iframes | Revision links | Licence line |
+| --- | --- | --- | --- | --- | --- | --- |
+| Home | 200 | 0 | 0 | 0 | 0 | no music shown |
+| Skater | 200 | 0 | 0 | 0 | 2 | yes |
+| Team | 200 | 0 | 0 | 0 | 1 | yes |
+| Piece | 200 | 0 | 0 | 0 | 2 | yes |
+| Performance with video | 200 | 0 | 0 | 0 | 1 | yes |
+| Performance with a `corrections` claim | 200 | 0 | 0 | 0 | 1 | yes |
+| Search results | 200 | 0 | 0 | 0 | 0 | no raw text shown |
+
+Every page had the Privacy, Terms and Sources footer links and the `mailto:` contact. The Piece page showed
+its composers, Source and Wikidata link, a grade badge on each Program, and a disabled "Wrong music?".
+Music text is attributed whenever its claim carries a Wikipedia article and revision, whatever the claim's
+origin: a `corrections` claim copies Wikipedia's text, so it is attributed too. Clicking the video created one
+`youtube-nocookie.com` iframe (intercepted). The search page listed the unmatched Program under
+"In music text".
+
 ## Audit and remaining launch checks
 
 - Public components load their assets locally. The only remote asset URL is the YouTube iframe,
@@ -57,8 +81,7 @@ tests retained. `pnpm check` passed with zero errors and warnings; the combined 
   tables, partnership context, follow links and attribution metadata before disk storage; biography
   fields are excluded. Legacy cached articles are validated and reduced on read too.
 - Wikipedia music attribution passed the combined-build check described above.
-- A Piece page does not exist at this revision, so the Piece browser acceptance item cannot yet run.
-  Repeat the same check when that page is implemented.
+- The Piece page passed the same check for #37 (see below).
 - Local checks do not verify production Cloudflare settings. Ensure Access protects only `/admin`,
   and that public-page features which set cookies (for example Bot Fight Mode or challenges) are off
   if the site's no-public-cookies promise is to hold. Verify the deployed site's response cookies.
