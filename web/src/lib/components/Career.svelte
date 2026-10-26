@@ -58,7 +58,7 @@
 						</span>
 						<div class="text-sm">
 							<MusicPieces pieces={p.music?.pieces ?? []} />
-							{#if p.music?.origin === 'wikipedia' && p.music.article_title}
+							{#if p.music?.article_title}
 								<a href={wikipediaUrl(p.music.article_title, p.music.revision)} title="Music: Wikipedia, {p.music.article_title}"
 									class="text-muted-foreground whitespace-pre-line hover:underline">{p.music.raw_text} ↗</a>
 							{:else}
@@ -77,7 +77,7 @@
 	<p class="text-muted-foreground">No results on record.</p>
 {/each}
 
-{#if performances.some((p) => p.music?.origin === 'wikipedia')}
+{#if performances.some((p) => p.music?.article_title)}
 	<p class="text-muted-foreground mt-4 text-xs">
 		Music: Wikipedia (linked on each music entry) ·
 		<a href="https://creativecommons.org/licenses/by-sa/4.0/" class="hover:underline">CC BY-SA 4.0, modified</a>.

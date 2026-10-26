@@ -221,8 +221,10 @@ async function piece(
 type Use = [piece_id: string, grade: 'identified' | 'credited' | 'title only', performer_id?: string];
 
 /** A Program's music claim of one origin, its entries graded and linked to Pieces in order. */
-async function music(trx: Kysely<DB>, program_id: string, raw_text: string, uses: Use[], origin = 'wikipedia') {
-	const attribution = origin === 'wikipedia' ? { article_title: 'Some Skater', revision: '1234' } : {};
+async function music(
+	trx: Kysely<DB>, program_id: string, raw_text: string, uses: Use[], origin = 'wikipedia',
+	attribution: { article_title?: string; revision?: string } = origin === 'wikipedia' ? { article_title: 'Some Skater', revision: '1234' } : {}
+) {
 	await trx.insertInto('music_claims').values({ program_id, origin, raw_text, ...attribution }).execute();
 	const style = await trx
 		.insertInto('styles')
@@ -327,7 +329,7 @@ test('"In music text" finds the Programs whose text names the music but whose Pi
 		);
 	}));
 
-test("a Piece page groups the Programs using it by Skater or Team, each with its grade, raw text and Performances not marked gone", () =>
+test("a Piece page groups the Programs using it by Skater or Team, each with its grade, raw text, Wikipedia article and Performances not marked gone", () =>
 	rolledBack(async (trx) => {
 		const her = await skater(trx, 'Anna PARTNER', 'anna-partner');
 		const him = await skater(trx, 'Boris PARTNER', 'boris-partner');
@@ -341,7 +343,8 @@ test("a Piece page groups the Programs using it by Skater or Team, each with its
 		await trx.insertInto('performance_videos').values({ youtube_id: 'clip', start_seconds: 0, performance_id: singles, origin: 'official' }).execute();
 		await music(trx, program, "He's a Pirate by Klaus Badelt; He's a Pirate (reprise)", [[pirate, 'title only'], [pirate, 'credited']]);
 		const pairs = await performance(trx, { team_id: pair }, { segment_type: 'free skating' });
-		await music(trx, await programOf(trx, pairs), 'Pirates', [[pirate, 'title only']], 'corrections');
+		// A corrections alias claim copies Wikipedia's text, so it keeps the article for attribution.
+		await music(trx, await programOf(trx, pairs), 'Pirates', [[pirate, 'title only']], 'corrections', { article_title: 'Some Team', revision: '99' });
 		await music(trx, await programOf(trx, await performance(trx, { skater_id: him }, { gone: true })), "He's a Pirate", [[pirate, 'identified']]);
 
 		const page = await piecePage(trx, 'hes-a-pirate');
@@ -363,7 +366,7 @@ test("a Piece page groups the Programs using it by Skater or Team, each with its
 				entity: 'team', slug: 'anna-partner-boris-partner', name: 'Anna PARTNER / Boris PARTNER',
 				programs: [{
 					id: await programOf(trx, pairs), season: 2025, segment_type: 'free skating', grade: 'title only',
-					raw_text: 'Pirates', origin: 'corrections', article_title: null, revision: null,
+					raw_text: 'Pirates', origin: 'corrections', article_title: 'Some Team', revision: '99',
 					performances: [{ id: pairs, competition, rank: 1, rank_label: null, video: false }]
 				}]
 			}

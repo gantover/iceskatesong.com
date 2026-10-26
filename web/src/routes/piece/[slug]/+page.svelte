@@ -46,7 +46,7 @@
 							>
 							<GradeBadge grade={program.grade} />
 						</p>
-						{#if program.origin === 'wikipedia' && program.article_title}
+						{#if program.article_title}
 							<a href={wikipediaUrl(program.article_title, program.revision)} title="Music: Wikipedia, {program.article_title}"
 								class="text-muted-foreground block text-sm whitespace-pre-line hover:underline">{program.raw_text} ↗</a
 							>
@@ -72,7 +72,7 @@
 		<p class="text-muted-foreground mt-4">No Program on record uses this Piece.</p>
 	{/each}
 
-	{#if programs.some((p) => p.origin === 'wikipedia')}
+	{#if programs.some((p) => p.article_title)}
 		<p class="text-muted-foreground mt-4 text-xs">
 			Music: Wikipedia (linked on each music entry) ·
 			<a href="https://creativecommons.org/licenses/by-sa/4.0/" class="hover:underline">CC BY-SA 4.0, modified</a>.

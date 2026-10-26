@@ -29,7 +29,7 @@ const searchQ = (q: string) => sql`q as (select q, replace(replace(replace(q, '\
 	from f_unaccent(lower(${q})) as q)`;
 
 // From 3 characters a substring or a close spelling, below that the start of a word.
-// Chosen here, not in a SQL case: the case kept the planner from short-circuiting the costly branch.
+// Chosen here rather than in a SQL case, so Postgres plans only the branch that applies.
 const matches = (key: string, query: string) =>
 	[...query].length >= 3
 		? sql`(${sql.ref(key)} like '%' || esc || '%' or q <% ${sql.ref(key)})`

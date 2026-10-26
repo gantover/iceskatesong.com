@@ -30,7 +30,7 @@
 				<h2 class="text-muted-foreground text-xs tracking-wide uppercase">Music</h2>
 				<div class="mt-2 text-sm"><MusicPieces pieces={p.music?.pieces ?? []} /></div>
 				<p class="text-muted-foreground mt-2 whitespace-pre-line text-sm">{p.music?.raw_text ?? 'Music not known yet'}</p>
-				{#if p.music?.origin === 'wikipedia' && p.music.article_title}
+				{#if p.music?.article_title}
 					<p class="text-muted-foreground mt-2 text-xs">
 						Music: <a href={wikipediaUrl(p.music.article_title, p.music.revision)} class="hover:underline">Wikipedia, {p.music.article_title}</a> ·
 						<a href="https://creativecommons.org/licenses/by-sa/4.0/" class="hover:underline">CC BY-SA 4.0, modified</a>.
