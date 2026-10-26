@@ -197,8 +197,10 @@ def apply(conn, fixes: dict, problems: list[dict]) -> None:
             continue
         if "title" in line:  # the line defines the Piece
             source = line.get("source") and writer.record("source", line["source"])
-            conn.execute("update pieces set title = %s, source_id = coalesce(%s, source_id) where id = %s",
-                         [line["title"], source, piece])
+            old = conn.execute("""update pieces p set title = %s, source_id = coalesce(%s, p.source_id) from pieces old
+                                  where p.id = %s and old.id = p.id returning old.title, old.source_id""",
+                               [line["title"], source, piece]).fetchone()
+            undo(conn, "update pieces set title = %s, source_id = %s where id = %s", *old, piece)
             for name in line.get("artists", []):
                 conn.execute("insert into piece_artists values (%s, %s, 'corrections') on conflict do nothing",
                              [piece, writer.record("artist", name)])

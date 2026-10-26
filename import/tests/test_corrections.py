@@ -200,6 +200,10 @@ ALIASES = """piece_aliases:
   - raw: Malinin's Prelude
     piece: ilia-malinin
     title: Prelude
+  - raw: Ravel's Bolero
+    piece: bolero
+    title: Boléro
+    source: Ballets
 """
 
 
@@ -217,7 +221,7 @@ def test_piece_aliases_repoint_wikipedia_entries_until_their_line_is_deleted(con
     assert run_import(conn, site, tmp_path, ALIASES) == ("succeeded", None)
     # A corrections claim carries Wikipedia's text and attribution; aliased entries are graded by their Piece.
     assert occurrences(conn, free, "corrections") == [
-        ("Bolero", "original", None, "title only"), ("He's a Pirate", "original", None, "credited"), wikipedia[2]]
+        ("Boléro", "original", None, "credited"), ("He's a Pirate", "original", None, "credited"), wikipedia[2]]
     assert conn.execute("select raw_text, article_title, revision from music_claims where origin = 'corrections'").fetchall() == [
         ("Tango\nHe is a Pirate from Pirates\nPrelude by Composer", "Ilia Malinin", 7)]
     assert occurrences(conn, free, "wikipedia") == wikipedia
@@ -226,7 +230,10 @@ def test_piece_aliases_repoint_wikipedia_entries_until_their_line_is_deleted(con
                                                  join genres g on g.id = pg.genre_id where pg.piece_id = p.id)
                            from pieces p join sources s on s.id = p.source_id where p.title = %s""", ["He's a Pirate"]).fetchall() == [
         ("Pirates of the Caribbean", ["Klaus Badelt"], ["film"])]
-    assert conn.execute("select name from names where entity = 'piece' and entity_id = %s", [bolero]).fetchall() == [("Tango",)]
+    assert conn.execute("select name from names where entity = 'piece' and entity_id = %s order by name", [bolero]).fetchall() == [
+        ("Ravel's Bolero",), ("Tango",)]
+    assert conn.execute("select p.title, s.name from pieces p join sources s on s.id = p.source_id where p.id = %s", [bolero]).fetchone() == (
+        "Boléro", "Ballets")
     assert unknown_keys(conn) == ["piece_aliases[2].piece"]
     assert conn.execute("select key from import_problems where kind = 'corrections slug taken by another record'").fetchall() == [
         ("piece_aliases[3].piece",)]
@@ -236,6 +243,10 @@ def test_piece_aliases_repoint_wikipedia_entries_until_their_line_is_deleted(con
     assert contents(conn) == with_aliases
 
     run_import(conn, site, tmp_path, "")
-    # The new Piece stays, unreferenced: slugs never change.
-    assert {t: rows for t, rows in contents(conn).items() if t not in ("pieces", "keys")} == {
-        t: rows for t, rows in imported.items() if t not in ("pieces", "keys")}
+    # The new Piece stays, unreferenced: slugs never change. Bolero gets its imported title back.
+    pirate = conn.execute("select entity_id from keys where system = 'slug' and value = 'he-s-a-pirate'").fetchone()[0]
+    restored = contents(conn)
+    for table, rows in (("pieces", f"({pirate},"), ("keys", "(slug,")):
+        restored[table] = [row for row in restored[table] if not row.startswith(rows)]
+        imported[table] = [row for row in imported[table] if not row.startswith(rows)]
+    assert restored == imported
