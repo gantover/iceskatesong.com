@@ -47,7 +47,7 @@ def conn(database_url):
     with psycopg.connect(database_url, autocommit=True) as conn:
         conn.execute("""truncate imports, import_problems, fetched_pages, keys, names, competitions, segments,
                         skaters, teams, programs, performances, performance_videos, youtube_videos,
-                        pieces, artists, sources, styles, genres, music_llm_cache restart identity cascade""")
+                        pieces, artists, sources, styles, genres, music_llm_cache, corrections_undo restart identity cascade""")
         yield conn
 
 

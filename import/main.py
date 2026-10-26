@@ -12,6 +12,7 @@ import psycopg
 from psycopg.types.json import Jsonb
 
 import apply
+import corrections
 import fetch
 import isu
 import normalise
@@ -51,13 +52,18 @@ def claim(conn) -> int | None:
 
 def run(conn, import_id: int, events_file: pathlib.Path, cache_dir: pathlib.Path, contact: str, interval=1.0,
         wikidata_endpoint: str | None = None, youtube_api=None, wikipedia_endpoint: str | None = None,
-        music_client=None, music_spend_cap=10, music_entity_endpoint=None) -> None:
+        music_client=None, music_spend_cap=10, music_entity_endpoint=None, corrections_file: pathlib.Path | None = None) -> None:
     """Run one claimed Import to `succeeded` or `failed`. `conn` must be in autocommit mode. No `wikidata_endpoint`: no Wikidata step.
-    No `youtube_api` (a `youtube.api` GET): no YouTube fetch, and videos are matched from the cache as it is."""
+    No `youtube_api` (a `youtube.api` GET): no YouTube fetch, and videos are matched from the cache as it is.
+    No `corrections_file`: the previous replay is reverted and nothing is replayed."""
     problems: list[dict] = []
     try:
         if not contact:
             raise ImportFailed("IMPORT_CONTACT_EMAIL is not set: the crawl must name a contact")
+        try:
+            fixes = corrections_file and corrections.load(corrections_file)
+        except corrections.Invalid as e:
+            raise ImportFailed(f"corrections.yaml: {e}") from e
         urls = read_events(events_file)
         fetcher = fetch.Fetcher(conn, cache_dir, f"iceskatesong-import/1.0 ({contact})", interval=interval)
         isu_ids = {value for (value,) in conn.execute("select value from keys where system = 'isu'")}
@@ -89,6 +95,7 @@ def run(conn, import_id: int, events_file: pathlib.Path, cache_dir: pathlib.Path
 
         with conn.transaction():
             conn.execute(IMPORT_LOCK)
+            corrections.revert(conn)  # every step below sees the imported state, as if the file were empty
             counts = apply.Apply(conn, problems).run(urls, lambda url: fetch.read_cached(cache_dir, url))
             if wikidata_items:
                 counts |= wikidata.apply(conn, wikidata_items, problems)
@@ -96,6 +103,8 @@ def run(conn, import_id: int, events_file: pathlib.Path, cache_dir: pathlib.Path
                 counts |= wikipedia.apply(conn, *wikipedia_data, problems)
             counts |= normalise.apply(conn, music, problems)
             counts |= youtube.link(conn, problems)  # after the ISU apply: links only to Performances that exist
+            if fixes:
+                corrections.apply(conn, fixes, problems)  # last, so every row it names exists
             finish(conn, import_id, "succeeded", problems, counts=counts)
     except Exception as e:
         with conn.transaction():
@@ -126,7 +135,7 @@ def main() -> None:
     # A run cut short this way stays `running` and is marked "interrupted" on the next start.
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
     here = pathlib.Path(__file__).parent
-    events_file, cache_dir = here / "events.txt", here / "cache"  # cache/ is a Docker volume
+    events_file, cache_dir = here / "events.txt", here / "cache"  # cache/ is a Docker volume; corrections.yaml a read-only mount
     contact = os.environ.get("IMPORT_CONTACT_EMAIL", "")
     youtube_key = os.environ.get("YOUTUBE_API_KEY", "")
     music_client = anthropic.Anthropic(max_retries=0, timeout=60) if os.environ.get("ANTHROPIC_API_KEY") else None
@@ -140,7 +149,8 @@ def main() -> None:
                 print(f"import: running Import {import_id}", flush=True)
                 run(conn, import_id, events_file, cache_dir, contact, wikidata_endpoint=wikidata.ENDPOINT,
                     youtube_api=youtube_key and youtube.api(youtube_key), wikipedia_endpoint=wikipedia.ENDPOINT,
-                    music_client=music_client, music_spend_cap=music_spend_cap, music_entity_endpoint=normalise.ENTITY_ENDPOINT)
+                    music_client=music_client, music_spend_cap=music_spend_cap, music_entity_endpoint=normalise.ENTITY_ENDPOINT,
+                    corrections_file=here / "corrections.yaml")
                 print(f"import: Import {import_id} finished", flush=True)
             else:
                 time.sleep(POLL_SECONDS)

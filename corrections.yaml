@@ -1,0 +1,40 @@
+# Corrections file: the Admin's fixes until the R2 edit screens replace it (ADR 0002).
+#
+# Every Import validates this file before it fetches anything (an invalid file fails the Import) and replays all of
+# it: deleting a line undoes its fix on the next Import. Git history is the audit trail. Records are named only by
+# their keys and slugs. A line whose key matches nothing is logged as "corrections line with an unknown key".
+# Quote values YAML could misread: 00013665 is an octal number and yes/no are booleans unquoted.
+
+# A raw music string (one Wikipedia music entry, exactly as a "music string with no alias match" problem shows it)
+# -> a Piece slug: every Program whose Wikipedia music has that entry shows that Piece there instead. With a title, the
+# line defines the Piece under that slug (new, or replacing its title); Artists are its composers or songwriters.
+piece_aliases:
+  # - raw: "Tango: Vuelvo al Sur by Medialuna Tango Project"
+  #   piece: vuelvo-al-sur
+  # - raw: "Black Swan pas de deux from Swan Lake"
+  #   piece: black-swan-pas-de-deux
+  #   title: Black Swan pas de deux
+  #   artists: [Pyotr Ilyich Tchaikovsky]
+  #   source: Swan Lake
+  #   genres: [classical]
+
+# A Program key (skater or team slug, Season start year, Segment type, seq when split) -> its ordered Arrangements.
+# Outranks Music Submissions and Wikipedia. style defaults to original; performer is the performing Artist.
+program_music:
+  # - program: {skater: ilia-malinin, season: 2025, segment_type: free skating}
+  #   music:
+  #     - piece: he-s-a-pirate
+  #     - piece: bad-romance
+  #       style: piano
+  #       performer: Vitamin String Quartet
+
+# Duplicate Skater slug: survivor slug. Moves the duplicate's keys, names, Performances and Team places to the
+# survivor and merges Programs with the same key.
+skater_merges:
+  # ilya-malinin: ilia-malinin
+
+# A YouTube ID and a Performance key (Competition slug, Discipline, Segment type, entry key as printed: the ISU ID,
+# else name + nation; level defaults to the Competition's, round to the main round).
+video_hides:
+  # - youtube: dQw4w9WgXcQ
+  #   performance: {competition: gpf2025, discipline: men, segment_type: free skating, entry: "00108049"}

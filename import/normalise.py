@@ -332,8 +332,8 @@ def prepare(conn, fetcher, wikipedia_data, problems, client=None, spend_cap=10, 
 
 
 class Writer:
-    def __init__(self, conn, entities, pairs=()):
-        self.conn = conn
+    def __init__(self, conn, entities, pairs=(), origin="wikipedia"):
+        self.conn, self.origin = conn, origin
         self.entities = entities
         self.pairs = pairs
         self.records = isu_apply.Apply(conn, [])
@@ -355,8 +355,8 @@ class Writer:
                 self.by_qid[qid] = self.catalog[id]
 
     def name(self, entity, id, name):
-        self.conn.execute("insert into names (entity, entity_id, name, origin) values (%s, %s, %s, 'wikipedia') on conflict do nothing",
-                          [entity, id, name])
+        self.conn.execute("insert into names (entity, entity_id, name, origin) values (%s, %s, %s, %s) on conflict do nothing",
+                          [entity, id, name, self.origin])
 
     def record(self, entity, name, qid=None):
         row = self.conn.execute("select entity_id from keys where system = 'wikidata' and value = %s and entity = %s",
@@ -434,6 +434,17 @@ class Writer:
             self.conn.execute("insert into piece_genres values (%s, %s, 'wikipedia') on conflict do nothing", [id, genre_id])
         return id
 
+    def arrangement(self, piece, style, performer):
+        style = self.lookup("styles", style)
+        performer = self.record("artist", performer) if performer else None
+        row = self.conn.execute("""select id from arrangements where piece_id = %s and style_id = %s
+            and performer_id is not distinct from %s""", [piece, style, performer]).fetchone()
+        if row:
+            return row[0]
+        self.counts["arrangement"]["created"] += 1
+        return self.conn.execute("""insert into arrangements (piece_id, style_id, performer_id)
+            values (%s, %s, %s) returning id""", [piece, style, performer]).fetchone()[0]
+
     def lookup(self, table, value):
         slug = isu_apply.slugify(value)
         row = self.conn.execute(f"select id from {table} where slug = %s", [slug]).fetchone()
@@ -442,6 +453,14 @@ class Writer:
         id = self.conn.execute(f"insert into {table} (slug) values (%s) returning id", [slug]).fetchone()[0]
         self.counts[table.removesuffix("s")]["created"] += 1
         return id
+
+
+def piece_grade(conn, piece):
+    """The grade of music the Admin picked: the Piece itself is the evidence."""
+    return conn.execute("""select case
+        when exists (select from keys where entity = 'piece' and entity_id = p.id and system = 'wikidata') then 'identified'
+        when p.source_id is not null or exists (select from piece_artists where piece_id = p.id) then 'credited'
+        else 'title only' end from pieces p where p.id = %s""", [piece]).fetchone()[0]
 
 
 def apply(conn, prepared, problems):
@@ -464,14 +483,7 @@ def apply(conn, prepared, problems):
             for p in found:
                 previous_raw, previous_piece = old.get(position, (None, None))
                 piece = writer.piece(p, previous_piece if previous_raw == entry["raw"] else None)
-                style = writer.lookup("styles", p["style"])
-                performer = writer.record("artist", p["performer"]) if p["performer"] else None
-                row = conn.execute("""select id from arrangements where piece_id = %s and style_id = %s
-                    and performer_id is not distinct from %s""", [piece, style, performer]).fetchone()
-                arrangement = row[0] if row else conn.execute("""insert into arrangements (piece_id, style_id, performer_id)
-                    values (%s, %s, %s) returning id""", [piece, style, performer]).fetchone()[0]
-                if not row:
-                    writer.counts["arrangement"]["created"] += 1
+                arrangement = writer.arrangement(piece, p["style"], p["performer"])
                 conn.execute("""insert into music_occurrences (program_id, origin, position, arrangement_id, grade, raw_text)
                     values (%s, 'wikipedia', %s, %s, %s, %s)""", [program, position, arrangement, p["grade"], entry["raw"]])
                 position += 1
