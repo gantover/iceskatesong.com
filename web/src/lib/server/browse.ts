@@ -29,8 +29,11 @@ const searchQ = (q: string) => sql`q as (select q, replace(replace(replace(q, '\
 	from f_unaccent(lower(${q})) as q)`;
 
 // From 3 characters a substring or a close spelling, below that the start of a word.
-const matches = (key: string) => sql`case when length(q) >= 3 then ${sql.ref(key)} like '%' || esc || '%' or q <% ${sql.ref(key)}
-	else ${sql.ref(key)} like esc || '%' or ${sql.ref(key)} like '% ' || esc || '%' end`;
+// Chosen here, not in a SQL case: the case kept the planner from short-circuiting the costly branch.
+const matches = (key: string, query: string) =>
+	[...query].length >= 3
+		? sql`(${sql.ref(key)} like '%' || esc || '%' or q <% ${sql.ref(key)})`
+		: sql`(${sql.ref(key)} like esc || '%' or ${sql.ref(key)} like '% ' || esc || '%')`;
 
 /**
  * Skaters and Teams whose name or alias matches, and Pieces whose title, alias, Artist or Source matches,
@@ -42,11 +45,11 @@ export async function search(db: Kysely<DB>, query: string) {
 	// The matching Pieces as hit(piece_id, substring, similarity).
 	const pieceHits = sql`
 		named as (
-			select 'piece' as entity, id, search_key from pieces, q where ${matches('search_key')}
-			union all select 'artist', id, search_key from artists, q where ${matches('search_key')}
-			union all select 'source', id, search_key from sources, q where ${matches('search_key')}
+			select 'piece' as entity, id, search_key from pieces, q where ${matches('search_key', q)}
+			union all select 'artist', id, search_key from artists, q where ${matches('search_key', q)}
+			union all select 'source', id, search_key from sources, q where ${matches('search_key', q)}
 			union all select entity, entity_id, search_key from names, q
-				where entity in ('piece', 'artist', 'source') and ${matches('search_key')}
+				where entity in ('piece', 'artist', 'source') and ${matches('search_key', q)}
 		),
 		hit as (
 			-- An Artist or Source finds its Pieces. One row per Piece: its best-matching name.
@@ -61,7 +64,7 @@ export async function search(db: Kysely<DB>, query: string) {
 		)`;
 	// The recall guarantee: music text that names what was searched, on Programs none of whose Pieces matched.
 	// The tsvector expression is the one migration 0007 indexes.
-	const { rows: text } = await sql<TextHit>`
+	const textHits = sql<TextHit>`
 		with ${searchQ(q)}, ${pieceHits}
 		select m.program_id, case when pr.team_id is null then 'skater' else 'team' end as entity,
 			coalesce(s.name, t.name) as name, coalesce(${slugOf('skater', 's.id')}, ${slugOf('team', 't.id')}) as slug,
@@ -77,27 +80,38 @@ export async function search(db: Kysely<DB>, query: string) {
 		order by ts_rank(to_tsvector('english', m.raw_text), websearch_to_tsquery('english', ${q})) desc, pr.season desc, m.program_id
 		limit 8
 	`.execute(db);
-	const { rows: music } = await sql<MusicHit>`
+	const musicHits = sql<MusicHit>`
 		with ${searchQ(q)}, ${pieceHits},
 		used as (
 			-- One grade per Program and Piece: its best.
 			select u.piece_id, u.program_id, min(array_position(${GRADES}::text[], u.grade)) as best
 			from ${currentMusic} u join hit using (piece_id)
 			group by u.piece_id, u.program_id
+		),
+		graded as (
+			select piece_id, sum(n)::int as programs, json_object_agg((${GRADES}::text[])[best], n) as grades
+			from (select piece_id, best, count(*)::int as n from used group by piece_id, best) g
+			group by piece_id
+		),
+		top as (
+			-- Ranked before the per-Piece lookups, so those run for 8 rows, not every hit.
+			select p.id, p.title, p.source_id, hit.substring, hit.similarity,
+				coalesce(graded.programs, 0) as programs, coalesce(graded.grades, '{}') as grades
+			from hit
+			join pieces p on p.id = hit.piece_id
+			left join graded using (piece_id)
+			order by substring desc, similarity desc, programs desc, p.title
+			limit 8
 		)
-		select ${slugOf('piece', 'p.id')} as slug, p.title,
+		select ${slugOf('piece', 'top.id')} as slug, top.title,
 			coalesce(s.name, (select string_agg(distinct a.name, ', ') from piece_artists pa join artists a on a.id = pa.artist_id
-				where pa.piece_id = p.id)) as credit,
-			(select count(*) from used where used.piece_id = p.id)::int as programs,
-			(select coalesce(json_object_agg((${GRADES}::text[])[best], n), '{}') from (
-				select best, count(*)::int as n from used where used.piece_id = p.id group by best) g) as grades
-		from hit
-		join pieces p on p.id = hit.piece_id
-		left join sources s on s.id = p.source_id
-		order by substring desc, similarity desc, programs desc, p.title
-		limit 8
+				where pa.piece_id = top.id)) as credit,
+			top.programs, top.grades
+		from top
+		left join sources s on s.id = top.source_id
+		order by substring desc, similarity desc, programs desc, top.title
 	`.execute(db);
-	const { rows } = await sql<Hit & { entity: 'skater' | 'team' }>`
+	const ownerHits = sql<Hit & { entity: 'skater' | 'team' }>`
 		with ${searchQ(q)},
 		hit as (
 			-- One row per record: its best-matching name. Substring matches rank above close spellings.
@@ -105,7 +119,7 @@ export async function search(db: Kysely<DB>, query: string) {
 				max((search_key like '%' || esc || '%')::int) as substring,
 				max(word_similarity(q, search_key)) as similarity
 			from names, q
-			where entity in ('skater', 'team') and ${matches('search_key')}
+			where entity in ('skater', 'team') and ${matches('search_key', q)}
 			group by entity, entity_id
 		)
 		select entity, name, slug from (
@@ -119,6 +133,7 @@ export async function search(db: Kysely<DB>, query: string) {
 		where n <= 8
 		order by n
 	`.execute(db);
+	const [{ rows: text }, { rows: music }, { rows }] = await Promise.all([textHits, musicHits, ownerHits]);
 	return {
 		skaters: rows.filter((r) => r.entity === 'skater').map(({ slug, name }) => ({ slug, name })),
 		teams: rows.filter((r) => r.entity === 'team').map(({ slug, name }) => ({ slug, name })),
