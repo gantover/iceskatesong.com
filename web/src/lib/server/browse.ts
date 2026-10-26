@@ -174,8 +174,9 @@ export type MusicClaim = {
 };
 
 // A Program's music is its highest-precedence claim (ADR 0002).
-const topClaim = (program: string) => sql`(select m.origin from music_claims m where m.program_id = ${sql.ref(program)}
-	order by array_position('{admin,corrections,submitted,wikipedia,isu}'::text[], m.origin) limit 1)`;
+// Its own alias, so a caller's `m.program_id` still names the caller's row.
+const topClaim = (program: string) => sql`(select top.origin from music_claims top where top.program_id = ${sql.ref(program)}
+	order by array_position('{admin,corrections,submitted,wikipedia,isu}'::text[], top.origin) limit 1)`;
 
 const musicOf = (program: string) => sql<MusicClaim | null>`(
 	select json_build_object('raw_text', m.raw_text, 'origin', m.origin,

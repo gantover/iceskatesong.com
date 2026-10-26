@@ -316,6 +316,8 @@ test('"In music text" finds the Programs whose text names the music but whose Pi
 		await music(trx, await program({ skater_id: her }, 'free dance', true), 'Pirates', []);
 		const teams = await program({ team_id: pair }, 'free skating');
 		await music(trx, teams, 'The Pirates', []);
+		// A corrections claim on another Program must not hide the Wikipedia ones.
+		await music(trx, await program({ skater_id: him }, 'short program'), 'Swan Lake', [[swan, 'credited']], 'corrections');
 
 		const { text } = await search(trx, 'pirate');
 
