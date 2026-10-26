@@ -71,6 +71,8 @@ def test_a_video_hide_survives_reimports_until_its_line_is_deleted(conn, site, t
         conn.execute(f"""insert into performance_videos (youtube_id, start_seconds, performance_id, origin)
                          values ('abcdefghijk', %s, ({MALININ_FREE}), 'official')""", [start])
     videos = "select status from performance_videos order by start_seconds"
+    run_import(conn, site, tmp_path, "")
+    imported = contents(conn)
 
     assert run_import(conn, site, tmp_path, HIDE) == ("succeeded", None)
     assert conn.execute(videos).fetchall() == [("hidden",), ("hidden",)]
@@ -82,6 +84,7 @@ def test_a_video_hide_survives_reimports_until_its_line_is_deleted(conn, site, t
 
     run_import(conn, site, tmp_path, "video_hides: []\n")
     assert conn.execute(videos).fetchall() == [("active",), ("active",)]
+    assert contents(conn) == imported
 
 
 def contents(conn):
@@ -286,3 +289,21 @@ def test_a_defined_piece_yields_its_slug_to_the_imported_piece(conn, site, tmp_p
     run_import(conn, site, tmp_path, "")
     assert conn.execute(wikipedia_piece).fetchall() == [("He's a Pirate",)]
     assert conn.execute("select title from pieces where title like 'He%%'").fetchall() == [("He's a Pirate",)]
+
+
+def test_an_alias_may_name_a_piece_a_later_line_defines(conn, site, tmp_path):
+    run_import(conn, site, tmp_path, "")
+    fixes = """piece_aliases:
+  - raw: Pirates
+    piece: he-s-a-pirate
+  - raw: He is a Pirate
+    piece: he-s-a-pirate
+    title: He's a Pirate
+"""
+    aliases = """select n.name from names n join keys k on k.system = 'slug' and k.entity = 'piece' and k.entity_id = n.entity_id
+                 where k.value = 'he-s-a-pirate' and n.origin = 'corrections' order by n.name"""
+    # The revert deletes the file's Piece, so every replay, not only the first, must define it before aliasing it.
+    for _ in range(2):
+        assert run_import(conn, site, tmp_path, fixes) == ("succeeded", None)
+        assert unknown_keys(conn) == []
+        assert conn.execute(aliases).fetchall() == [("He is a Pirate",), ("Pirates",)]

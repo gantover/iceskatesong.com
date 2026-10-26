@@ -191,7 +191,8 @@ def apply(conn, fixes: dict, problems: list[dict]) -> None:
 
     writer = normalise.Writer(conn, {}, origin="corrections")
     aliases = {}
-    for i, line in enumerate(fixes["piece_aliases"]):
+    # Defining lines first: the revert deleted the file's Pieces, and an alias line may come before its definition.
+    for i, line in sorted(enumerate(fixes["piece_aliases"]), key=lambda numbered: "title" not in numbered[1]):
         piece = slug_owner(conn, "piece", line["piece"])
         if "title" in line:  # the line defines a new Piece; an existing one only takes the alias (ADR 0002)
             if conn.execute("select 1 from keys where system = 'slug' and value = %s", [line["piece"]]).fetchone():
