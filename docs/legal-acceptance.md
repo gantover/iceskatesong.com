@@ -35,7 +35,8 @@ To repeat with any local fixture database:
 
 1. Migrate an isolated database and seed a Skater, Team, their Programs and Performances, including a
    Performance video. Start `DATABASE_URL=<isolated database URL> pnpm dev --host 127.0.0.1 --port 5178`
-   from `web/`. Do not point fixture writes at the live database.
+   from `web/`. Do not point fixture writes at the live database. After any code edit, restart the server:
+   a hot reload once switched it to `.env`'s `DATABASE_URL`. Confirm a fixture-only page renders before trusting results.
 2. In a fresh Playwright browser context, attach a `page.on('request')` listener before navigation.
    Visit home, the fixture Skater, Team and Performance, then `/privacy`, `/terms` and `/sources`.
    After `waitForLoadState('networkidle')`, require HTTP 200, no request hostname other than the local
