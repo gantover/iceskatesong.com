@@ -81,7 +81,7 @@ origin: a `corrections` claim copies Wikipedia's text, so it is attributed too. 
   tables, partnership context, follow links and attribution metadata before disk storage; biography
   fields are excluded. Legacy cached articles are validated and reduced on read too.
 - Wikipedia music attribution passed the combined-build check described above.
-- The Piece page passed the same check for #37 (see below).
+- The Piece page passed the same check for #37 (see above).
 - Local checks do not verify production Cloudflare settings. Ensure Access protects only `/admin`,
   and that public-page features which set cookies (for example Bot Fight Mode or challenges) are off
   if the site's no-public-cookies promise is to hold. Verify the deployed site's response cookies.

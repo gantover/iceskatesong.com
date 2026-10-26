@@ -93,7 +93,7 @@ export async function search(db: Kysely<DB>, query: string) {
 			from (select piece_id, best, count(*)::int as n from used group by piece_id, best) g
 			group by piece_id
 		),
-		top as (
+		shown as (
 			-- Ranked before the per-Piece lookups, so those run for 8 rows, not every hit.
 			select p.id, p.title, p.source_id, hit.substring, hit.similarity,
 				coalesce(graded.programs, 0) as programs, coalesce(graded.grades, '{}') as grades
@@ -103,13 +103,13 @@ export async function search(db: Kysely<DB>, query: string) {
 			order by substring desc, similarity desc, programs desc, p.title
 			limit 8
 		)
-		select ${slugOf('piece', 'top.id')} as slug, top.title,
+		select ${slugOf('piece', 'shown.id')} as slug, shown.title,
 			coalesce(s.name, (select string_agg(distinct a.name, ', ') from piece_artists pa join artists a on a.id = pa.artist_id
-				where pa.piece_id = top.id)) as credit,
-			top.programs, top.grades
-		from top
-		left join sources s on s.id = top.source_id
-		order by substring desc, similarity desc, programs desc, top.title
+				where pa.piece_id = shown.id)) as credit,
+			shown.programs, shown.grades
+		from shown
+		left join sources s on s.id = shown.source_id
+		order by substring desc, similarity desc, programs desc, shown.title
 	`.execute(db);
 	const ownerHits = sql<Hit & { entity: 'skater' | 'team' }>`
 		with ${searchQ(q)},
