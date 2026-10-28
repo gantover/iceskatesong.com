@@ -5,6 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
+		"prototype:theme": "DATABASE_URL=postgres://iceskatesong:iceskatesong@localhost:5432/iceskatesong_prototype vite dev --port 5179 --strictPort",
 		"build": "vite build",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
@@ -13,6 +14,13 @@
 		"db:types": "kysely-codegen --dialect postgres --exclude-pattern alembic_version --out-file src/lib/server/db-types.ts"
 	},
 	"devDependencies": {
+		"@fontsource-variable/fraunces": "^5.3.0",
+		"@fontsource-variable/manrope": "^5.3.0",
+		"@fontsource-variable/saira": "^5.3.0",
+		"@fontsource-variable/source-sans-3": "^5.3.1",
+		"@fontsource/ibm-plex-mono": "^5.3.0",
+		"@fontsource/ibm-plex-sans": "^5.3.0",
+		"@fontsource/titillium-web": "^5.3.0",
 		"@lucide/svelte": "^1.58.0",
 		"@sveltejs/adapter-node": "^6.0.0",
 		"@sveltejs/kit": "^3.0.0",

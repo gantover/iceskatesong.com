@@ -1,5 +1,8 @@
 <script lang="ts">
 	import './layout.css';
+	import './prototype-themes.css';
+	import { dev } from '$app/env';
+	import PrototypeSwitcher from '#lib/components/PrototypeSwitcher.svelte';
 	import favicon from '#lib/assets/favicon.svg';
 	import { ModeWatcher, toggleMode } from 'mode-watcher';
 	import MoonIcon from '@lucide/svelte/icons/moon';
@@ -41,3 +44,5 @@
 	</nav>
 	<a href="mailto:{data.site.email}" class="break-all hover:underline">{data.site.email}</a>
 </footer>
+
+{#if dev}<PrototypeSwitcher />{/if}

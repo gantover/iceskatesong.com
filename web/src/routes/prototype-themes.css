@@ -1,0 +1,235 @@
+/* PROTOTYPE (#39), throwaway: four theme variants (palette, self-hosted fonts, radius) in light and dark,
+   picked by ?variant= through PrototypeSwitcher. Variant 0 is the current shadcn neutral theme, as a control.
+   Each variant needs its own .dark block: :root[data-variant] outranks the base .dark rule. */
+@import '@fontsource/titillium-web/400.css';
+@import '@fontsource/titillium-web/600.css';
+@import '@fontsource/titillium-web/700.css';
+@import '@fontsource-variable/saira/standard.css';
+@import '@fontsource-variable/saira/standard-italic.css';
+@import '@fontsource-variable/manrope/wght.css';
+@import '@fontsource-variable/fraunces/opsz.css';
+@import '@fontsource-variable/source-sans-3/wght.css';
+@import '@fontsource/ibm-plex-sans/400.css';
+@import '@fontsource/ibm-plex-sans/500.css';
+@import '@fontsource/ibm-plex-sans/600.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+@import '@fontsource/ibm-plex-mono/700.css';
+@import '@fontsource/ibm-plex-sans/700.css';
+
+/* A · Pit wall: the owner's F1 reference. White and warm-grey tiles, carbon ink, racing red; Titillium body, Saira italic display; near-square corners. */
+:root[data-variant='a'] {
+	--radius: 0.25rem;
+	--background: oklch(1 0 0);
+	--foreground: oklch(0.2 0.015 285);
+	--card: oklch(0.965 0.005 60);
+	--card-foreground: oklch(0.2 0.015 285);
+	--popover: oklch(1 0 0);
+	--popover-foreground: oklch(0.2 0.015 285);
+	--primary: oklch(0.56 0.225 29);
+	--primary-foreground: oklch(1 0 0);
+	--secondary: oklch(0.2 0.015 285);
+	--secondary-foreground: oklch(1 0 0);
+	--muted: oklch(0.94 0.006 60);
+	--muted-foreground: oklch(0.47 0.012 285);
+	--accent: oklch(0.94 0.006 60);
+	--accent-foreground: oklch(0.2 0.015 285);
+	--border: oklch(0.9 0.006 60);
+	--input: oklch(0.9 0.006 60);
+	--ring: oklch(0.56 0.225 29);
+}
+:root[data-variant='a'].dark {
+	--background: oklch(0.19 0.015 285);
+	--foreground: oklch(0.97 0.003 60);
+	--card: oklch(0.235 0.016 285);
+	--card-foreground: oklch(0.97 0.003 60);
+	--popover: oklch(0.235 0.016 285);
+	--popover-foreground: oklch(0.97 0.003 60);
+	--primary: oklch(0.66 0.21 29);
+	--primary-foreground: oklch(0.17 0.015 285);
+	--secondary: oklch(0.97 0.003 60);
+	--secondary-foreground: oklch(0.19 0.015 285);
+	--muted: oklch(0.28 0.016 285);
+	--muted-foreground: oklch(0.74 0.01 285);
+	--accent: oklch(0.3 0.016 285);
+	--accent-foreground: oklch(0.97 0.003 60);
+	--border: oklch(1 0 0 / 11%);
+	--input: oklch(1 0 0 / 15%);
+	--ring: oklch(0.66 0.21 29);
+}
+:root[data-variant='a'] body {
+	font-family: 'Titillium Web', system-ui, sans-serif;
+}
+:root[data-variant='a'] :is(h1, h2) {
+	font-family: 'Saira Variable', 'Arial Narrow', sans-serif;
+	font-stretch: 85%;
+	text-transform: uppercase;
+}
+:root[data-variant='a'] h1 {
+	font-style: italic;
+	font-weight: 850;
+	letter-spacing: -0.01em;
+}
+:root[data-variant='a'] h2 {
+	font-weight: 700;
+	letter-spacing: 0.04em;
+}
+
+/* B · Rink: cool and airy. Pale ice ground, navy ink, deep blue that turns icy cyan at night; Manrope throughout; soft corners. */
+:root[data-variant='b'] {
+	--radius: 0.875rem;
+	--background: oklch(0.982 0.007 230);
+	--foreground: oklch(0.25 0.045 258);
+	--card: oklch(1 0 0);
+	--card-foreground: oklch(0.25 0.045 258);
+	--popover: oklch(1 0 0);
+	--popover-foreground: oklch(0.25 0.045 258);
+	--primary: oklch(0.48 0.16 256);
+	--primary-foreground: oklch(0.99 0.005 230);
+	--secondary: oklch(0.94 0.02 230);
+	--secondary-foreground: oklch(0.25 0.045 258);
+	--muted: oklch(0.95 0.014 230);
+	--muted-foreground: oklch(0.5 0.035 252);
+	--accent: oklch(0.93 0.03 225);
+	--accent-foreground: oklch(0.25 0.045 258);
+	--border: oklch(0.91 0.016 232);
+	--input: oklch(0.91 0.016 232);
+	--ring: oklch(0.65 0.12 235);
+}
+:root[data-variant='b'].dark {
+	--background: oklch(0.2 0.035 258);
+	--foreground: oklch(0.96 0.012 230);
+	--card: oklch(0.24 0.04 258);
+	--card-foreground: oklch(0.96 0.012 230);
+	--popover: oklch(0.24 0.04 258);
+	--popover-foreground: oklch(0.96 0.012 230);
+	--primary: oklch(0.8 0.11 222);
+	--primary-foreground: oklch(0.2 0.035 258);
+	--secondary: oklch(0.29 0.045 256);
+	--secondary-foreground: oklch(0.96 0.012 230);
+	--muted: oklch(0.28 0.042 257);
+	--muted-foreground: oklch(0.74 0.035 240);
+	--accent: oklch(0.31 0.05 255);
+	--accent-foreground: oklch(0.96 0.012 230);
+	--border: oklch(0.85 0.05 230 / 13%);
+	--input: oklch(0.85 0.05 230 / 18%);
+	--ring: oklch(0.7 0.1 225);
+}
+:root[data-variant='b'] body {
+	font-family: 'Manrope Variable', system-ui, sans-serif;
+}
+:root[data-variant='b'] h1 {
+	font-weight: 800;
+	letter-spacing: -0.03em;
+}
+
+/* C · Programme notes: a concert programme. Ivory paper, oxblood ink by day, brass by night; Fraunces headings, Source Sans body; hairline corners. */
+:root[data-variant='c'] {
+	--radius: 0.125rem;
+	--background: oklch(0.975 0.012 85);
+	--foreground: oklch(0.23 0.02 50);
+	--card: oklch(0.992 0.007 85);
+	--card-foreground: oklch(0.23 0.02 50);
+	--popover: oklch(0.992 0.007 85);
+	--popover-foreground: oklch(0.23 0.02 50);
+	--primary: oklch(0.43 0.135 20);
+	--primary-foreground: oklch(0.975 0.012 85);
+	--secondary: oklch(0.94 0.018 80);
+	--secondary-foreground: oklch(0.23 0.02 50);
+	--muted: oklch(0.945 0.017 80);
+	--muted-foreground: oklch(0.49 0.028 60);
+	--accent: oklch(0.93 0.03 70);
+	--accent-foreground: oklch(0.23 0.02 50);
+	--border: oklch(0.87 0.022 75);
+	--input: oklch(0.87 0.022 75);
+	--ring: oklch(0.6 0.1 20);
+}
+:root[data-variant='c'].dark {
+	--background: oklch(0.185 0.012 50);
+	--foreground: oklch(0.94 0.016 85);
+	--card: oklch(0.22 0.014 50);
+	--card-foreground: oklch(0.94 0.016 85);
+	--popover: oklch(0.22 0.014 50);
+	--popover-foreground: oklch(0.94 0.016 85);
+	--primary: oklch(0.81 0.11 80);
+	--primary-foreground: oklch(0.2 0.02 50);
+	--secondary: oklch(0.27 0.016 50);
+	--secondary-foreground: oklch(0.94 0.016 85);
+	--muted: oklch(0.26 0.015 50);
+	--muted-foreground: oklch(0.73 0.022 75);
+	--accent: oklch(0.29 0.02 55);
+	--accent-foreground: oklch(0.94 0.016 85);
+	--border: oklch(0.9 0.03 85 / 12%);
+	--input: oklch(0.9 0.03 85 / 17%);
+	--ring: oklch(0.7 0.09 80);
+}
+:root[data-variant='c'] body {
+	font-family: 'Source Sans 3 Variable', system-ui, sans-serif;
+}
+:root[data-variant='c'] :is(h1, h2) {
+	font-family: 'Fraunces Variable', Georgia, serif;
+	font-optical-sizing: auto;
+}
+:root[data-variant='c'] h1 {
+	font-weight: 600;
+	letter-spacing: -0.01em;
+}
+:root[data-variant='c'] h2 {
+	font-weight: 500;
+}
+
+/* D · Scoreboard: an arena results board. Graphite and medal gold, built dark-first; Plex Sans with Plex Mono for every score; medium corners. */
+:root[data-variant='d'] {
+	--radius: 0.5rem;
+	--background: oklch(0.965 0.003 260);
+	--foreground: oklch(0.19 0.01 260);
+	--card: oklch(1 0 0);
+	--card-foreground: oklch(0.19 0.01 260);
+	--popover: oklch(1 0 0);
+	--popover-foreground: oklch(0.19 0.01 260);
+	--primary: oklch(0.47 0.1 70);
+	--primary-foreground: oklch(1 0 0);
+	--secondary: oklch(0.92 0.004 260);
+	--secondary-foreground: oklch(0.19 0.01 260);
+	--muted: oklch(0.93 0.004 260);
+	--muted-foreground: oklch(0.47 0.01 260);
+	--accent: oklch(0.92 0.03 85);
+	--accent-foreground: oklch(0.19 0.01 260);
+	--border: oklch(0.89 0.005 260);
+	--input: oklch(0.89 0.005 260);
+	--ring: oklch(0.7 0.13 80);
+}
+:root[data-variant='d'].dark {
+	--background: oklch(0.165 0.008 260);
+	--foreground: oklch(0.95 0.004 260);
+	--card: oklch(0.205 0.01 260);
+	--card-foreground: oklch(0.95 0.004 260);
+	--popover: oklch(0.205 0.01 260);
+	--popover-foreground: oklch(0.95 0.004 260);
+	--primary: oklch(0.84 0.15 84);
+	--primary-foreground: oklch(0.18 0.01 260);
+	--secondary: oklch(0.26 0.01 260);
+	--secondary-foreground: oklch(0.95 0.004 260);
+	--muted: oklch(0.25 0.01 260);
+	--muted-foreground: oklch(0.71 0.01 260);
+	--accent: oklch(0.29 0.03 85);
+	--accent-foreground: oklch(0.95 0.004 260);
+	--border: oklch(1 0 0 / 9%);
+	--input: oklch(1 0 0 / 14%);
+	--ring: oklch(0.84 0.15 84);
+}
+:root[data-variant='d'] body {
+	font-family: 'IBM Plex Sans', system-ui, sans-serif;
+}
+:root[data-variant='d'] :is(.tabular-nums, h1) {
+	font-family: 'IBM Plex Mono', ui-monospace, monospace;
+}
+:root[data-variant='d'] h1 {
+	font-weight: 500;
+	letter-spacing: -0.02em;
+}
+:root[data-variant='d'] h2 {
+	text-transform: uppercase;
+	font-size: 0.85em;
+	letter-spacing: 0.08em;
+}
