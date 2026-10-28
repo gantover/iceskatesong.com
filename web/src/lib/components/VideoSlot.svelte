@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Button } from '#lib/components/ui/button/index.js';
 	import { cn } from '#lib/utils.js';
+	import PlayIcon from '@lucide/svelte/icons/play';
 
 	type Video = { youtube_id: string; start_seconds: number | null; origin: string; title: string | null };
 
@@ -67,7 +68,7 @@
 		{#each videos as v, i (i)}
 			<li class="flex flex-wrap items-center gap-2">
 				<button type="button" onclick={() => (current = v)} class={cn('hover:underline', v === current && 'font-semibold')}
-					>{v === current ? '▶' : '·'} {label(v)}</button
+					><PlayIcon class={cn('inline size-3.5 align-[-0.125em]', v !== current && 'invisible')} /> {label(v)}</button
 				>
 				{#if v.start_seconds === null}<span class="bg-muted text-muted-foreground rounded px-1.5 text-xs">untimed, plays last</span>{/if}
 			</li>

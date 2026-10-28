@@ -4,6 +4,8 @@
 	import { cn } from '#lib/utils.js';
 	import MusicPieces from './MusicPieces.svelte';
 	import { wikipediaUrl } from '#lib/wikipedia.js';
+	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
+	import PlayIcon from '@lucide/svelte/icons/play';
 
 	/** Season tabs linking to `{base}/{season}`, and the chosen Season's Competitions, one row per Segment. */
 	let {
@@ -60,13 +62,13 @@
 							<MusicPieces pieces={p.music?.pieces ?? []} />
 							{#if p.music?.article_title}
 								<a href={wikipediaUrl(p.music.article_title, p.music.revision)} title="Music: Wikipedia, {p.music.article_title}"
-									class="text-muted-foreground whitespace-pre-line hover:underline">{p.music.raw_text} ↗</a>
+									class="text-muted-foreground whitespace-pre-line hover:underline">{p.music.raw_text} <ExternalLinkIcon class="inline size-3.5 align-[-0.125em]" /></a>
 							{:else}
 								<span class="text-muted-foreground whitespace-pre-line">{p.music?.raw_text ?? 'Music not known yet'}</span>
 							{/if}
 						</div>
 						<a href="/performance/{p.id}" class={cn('text-sm hover:underline sm:text-right', p.video ? 'text-primary' : 'text-muted-foreground')}>
-							{p.video ? '▶ video' : 'no video'}
+							{#if p.video}<PlayIcon class="inline size-3.5 align-[-0.125em]" /> video{:else}no video{/if}
 					</a>
 					</div>
 				</li>

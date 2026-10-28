@@ -2,6 +2,8 @@
 	import GradeBadge from '#lib/components/GradeBadge.svelte';
 	import { capitalize, seasonName } from '#lib/format.js';
 	import { wikipediaUrl } from '#lib/wikipedia.js';
+	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
+	import PlayIcon from '@lucide/svelte/icons/play';
 
 	let { data } = $props();
 	const piece = $derived(data.piece);
@@ -20,7 +22,7 @@
 		{#if piece.composers.length && piece.source}·{/if}
 		{#if piece.source}From <em>{piece.source}</em>{/if}
 		{#if piece.qid}
-			· <a href="https://www.wikidata.org/wiki/{piece.qid}" class="hover:underline">Wikidata {piece.qid} ↗</a>
+			· <a href="https://www.wikidata.org/wiki/{piece.qid}" class="hover:underline">Wikidata {piece.qid} <ExternalLinkIcon class="inline size-3.5 align-[-0.125em]" /></a>
 		{/if}
 	</p>
 	<p class="mt-2 text-sm">
@@ -48,7 +50,7 @@
 						</p>
 						{#if program.article_title}
 							<a href={wikipediaUrl(program.article_title, program.revision)} title="Music: Wikipedia, {program.article_title}"
-								class="text-muted-foreground block text-sm whitespace-pre-line hover:underline">{program.raw_text} ↗</a
+								class="text-muted-foreground block text-sm whitespace-pre-line hover:underline">{program.raw_text} <ExternalLinkIcon class="inline size-3.5 align-[-0.125em]" /></a
 							>
 						{:else}
 							<p class="text-muted-foreground text-sm whitespace-pre-line">{program.raw_text}</p>
@@ -59,7 +61,7 @@
 									<a href="/performance/{p.id}" class="hover:underline">{p.competition}</a>
 									<span class="shrink-0 tabular-nums">
 										{p.rank_label ?? p.rank ?? '–'} ·
-										<span class={p.video ? 'text-primary' : 'text-muted-foreground'}>{p.video ? '▶ video' : 'no video'}</span>
+										<span class={p.video ? 'text-primary' : 'text-muted-foreground'}>{#if p.video}<PlayIcon class="inline size-3.5 align-[-0.125em]" /> video{:else}no video{/if}</span>
 									</span>
 								</li>
 							{/each}

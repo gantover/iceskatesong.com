@@ -3,6 +3,9 @@
 	import VideoSlot from '#lib/components/VideoSlot.svelte';
 	import { dateRange, seasonName, segmentName } from '#lib/format.js';
 	import { wikipediaUrl } from '#lib/wikipedia.js';
+	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
+	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
+	import PlayIcon from '@lucide/svelte/icons/play';
 
 	let { data } = $props();
 	const p = $derived(data.performance);
@@ -14,8 +17,9 @@
 
 <main class="mx-auto max-w-5xl px-4 py-6">
 	<nav class="text-muted-foreground text-sm" aria-label="Breadcrumb">
-		<a href="/" class="hover:underline">Search</a> ›
-		<a href="/{p.entity}/{p.slug}/{p.season}" class="hover:underline">{p.name} {seasonName(p.season)}</a> › Performance
+		<a href="/" class="hover:underline">Search</a> <ChevronRightIcon class="inline size-3.5 align-[-0.125em]" />
+		<a href="/{p.entity}/{p.slug}/{p.season}" class="hover:underline">{p.name} {seasonName(p.season)}</a>
+		<ChevronRightIcon class="inline size-3.5 align-[-0.125em]" /> Performance
 	</nav>
 	<h1 class="mt-1 text-2xl font-semibold tracking-tight">{p.name}</h1>
 	<p class="text-muted-foreground">{p.competition} · {segmentName(p)}</p>
@@ -61,7 +65,7 @@
 				{/if}
 				<p class="text-muted-foreground mt-2 text-sm">{p.city} · {dateRange(p.start_date, p.end_date)}</p>
 				<a href={p.url} target="_blank" rel="noopener noreferrer" class="text-primary mt-1 inline-block text-sm hover:underline"
-					>ISU result page ↗</a
+					>ISU result page <ExternalLinkIcon class="inline size-3.5 align-[-0.125em]" /></a
 				>
 			</section>
 			{#if data.sameProgram.length}
@@ -72,7 +76,8 @@
 							<li class="flex justify-between gap-2">
 								<a href="/performance/{other.id}" class="hover:underline">{other.competition}</a>
 								<span class="text-muted-foreground shrink-0 tabular-nums"
-									>{other.rank_label ?? other.rank ?? '–'}{other.video ? ' · ▶' : ''}</span
+									>{other.rank_label ?? other.rank ?? '–'}{#if other.video}
+										· <PlayIcon class="inline size-3.5 align-[-0.125em]" /><span class="sr-only">video</span>{/if}</span
 								>
 							</li>
 						{/each}
