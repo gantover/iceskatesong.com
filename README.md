@@ -50,6 +50,8 @@ Check the ARM64 build: `docker buildx build --platform linux/arm64 web` (same fo
 
 ## On the box
 
+First setup of a box, or a move to a new one: run `scripts/launch-wizard.sh` on the laptop. It walks every Cloudflare, R2, Healthchecks and API-key step, writes the values to the git-ignored `.env.box`, copies that to the box as `.env`, deploys, and runs the restore drill.
+
 `.env` sets `COMPOSE_PROFILES=prod`, which adds `backup` (nightly `pg_dump` to R2 at 03:00 UTC, 30-day retention, then a Healthchecks ping) and `cloudflared` (the Tunnel; its public hostname points at `http://web:3000`). Logs: `docker compose logs <service>`, rotated at 3 × 10 MB.
 
 ```sh
