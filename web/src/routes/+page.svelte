@@ -12,10 +12,10 @@
 	<h1 class="text-3xl font-semibold tracking-tight">Who skated to what</h1>
 	<p class="text-muted-foreground mt-2">Results and videos of ISU figure skating Performances since 2004–05.</p>
 	<div class="mt-8 text-left"><SearchBox large /></div>
-	<p class="text-muted-foreground mt-3 text-sm">
+	<p class="text-muted-foreground mt-3 flex flex-wrap items-center justify-center gap-x-1.5 gap-y-2 text-sm">
 		Try
 		{#each EXAMPLES as example (example)}
-			<a href="/search?q={encodeURIComponent(example)}" class="hover:bg-muted ml-1 inline-block rounded-full border px-2.5 py-0.5"
+			<a href="/search?q={encodeURIComponent(example)}" class="hover:bg-muted rounded-full border px-2.5 py-0.5"
 				>{example}</a
 			>
 		{/each}
