@@ -10,6 +10,7 @@
 	let hits = $state<{ skaters: Hit[]; teams: Hit[]; music: MusicHit[]; text: TextHit[] }>();
 	let open = $state(false);
 	let controller: AbortController | undefined;
+	let form: HTMLFormElement;
 
 	async function lookup() {
 		// A slower answer to an older query must not overwrite a newer one.
@@ -44,12 +45,20 @@
 	<li class="text-muted-foreground px-3 pt-2 pb-1 text-xs tracking-wide uppercase" role="presentation">{text}</li>
 {/snippet}
 
+<svelte:document
+	onpointerdown={(e) => {
+		if (!form.contains(e.target as Node)) open = false;
+	}}
+/>
+
+<!-- Safari blurs with no relatedTarget before a link click lands: only Tab out closes the list here. -->
 <form
+	bind:this={form}
 	action="/search"
 	role="search"
 	class="relative w-full"
 	onfocusout={(e) => {
-		if (!e.currentTarget.contains(e.relatedTarget as Node)) open = false;
+		if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget as Node)) open = false;
 	}}
 >
 	<input

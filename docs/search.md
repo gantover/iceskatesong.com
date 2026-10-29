@@ -19,6 +19,10 @@ Programs whose Performances are all marked gone count nowhere: not in the grade 
 One `search()` serves the home dropdown (`/api/search`) and the `/search` page. Each group shows at most 8 hits, as the
 Skater and Team groups already did.
 
+The dropdown closes on a pointer press outside the search box, Escape, or focus moving to an element outside it.
+A blur with no `relatedTarget` doesn't close it: Safari doesn't focus a clicked link, so closing then removed the
+suggestion before its click landed, leaving the home page (found on production, 2026-10-29).
+
 **Matching** (pg_trgm, accents and case ignored): from 3 characters a substring or a close spelling, below that the start
 of a word. The length is counted on the query as typed; the old SQL counted it after removing accents, so the two differ
 only for characters that expand (ß, æ, œ) right at the boundary.
