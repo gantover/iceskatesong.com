@@ -73,6 +73,23 @@ origin: a `corrections` claim copies Wikipedia's text, so it is attributed too. 
 `youtube-nocookie.com` iframe (intercepted). The search page listed the unmatched Program under
 "In music text".
 
+## Deployed site (#41)
+
+Checked 2026-10-29 with Playwright Chromium against `https://iceskatesong.com`, after the first successful
+production Import (6,076 Skaters, 55,776 Performances, 10,039 Pieces, 36,615 videos). Each page opened in a
+fresh browser context, with the same request, cookie and iframe checks as above:
+
+| Page | HTTP status | Third-party requests before a video click | Cookies | `Set-Cookie` | Initial iframes |
+| --- | --- | --- | --- | --- | --- |
+| Home | 200 | 0 | 0 | none | 0 |
+| Skater (`/skater/yuzuru-hanyu`) | 200 | 0 | 0 | none | 0 |
+| Piece (`/piece/pirates-of-the-caribbean`) | 200 | 0 | 0 | none | 0 |
+| Performance with video (`/performance/105331`) | 200 | 0 | 0 | none | 0 |
+
+Cloudflare added no cookie to any public page, so Bot Fight Mode and challenges leave the no-public-cookies
+promise intact. Clicking the video created one `youtube-nocookie.com/embed/…` iframe (intercepted) and still
+no cookies. The footer's Privacy, Terms and Sources links returned 200, and its contact is the `mailto:` above.
+
 ## Audit and remaining launch checks
 
 - Public components load their assets locally. The only remote asset URL is the YouTube iframe,
@@ -85,7 +102,7 @@ origin: a `corrections` claim copies Wikipedia's text, so it is attributed too. 
 - The Piece page passed the same check for #37 (see above).
 - Local checks do not verify production Cloudflare settings. Ensure Access protects only `/admin`,
   and that public-page features which set cookies (for example Bot Fight Mode or challenges) are off
-  if the site's no-public-cookies promise is to hold. Verify the deployed site's response cookies.
+  if the site's no-public-cookies promise is to hold. The deployed site's response cookies passed (see above).
 - The owner still reviews the wording before launch. Operational logs are described by their actual
   three-file, 10 MB rotation limit rather than an unimplemented time-based deletion promise.
 
