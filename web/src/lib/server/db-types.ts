@@ -84,6 +84,7 @@ export interface Imports {
   finished_at: Timestamp | null;
   id: Generated<Int8>;
   problem_count: Generated<number>;
+  scope: Generated<string>;
   started_at: Timestamp | null;
   status: Generated<string>;
 }

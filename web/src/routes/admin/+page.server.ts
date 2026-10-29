@@ -8,5 +8,6 @@ export const load = async () => ({
 });
 
 export const actions = {
-	importNow: () => queueImport(db)
+	quickImport: () => queueImport(db, 'quick'),
+	fullImport: () => queueImport(db, 'full')
 };

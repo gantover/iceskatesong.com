@@ -28,9 +28,9 @@ class Apply:
         row = self.conn.execute(query, params).fetchone()
         return row and row[0]
 
-    def run(self, event_urls: list[str], read: Callable[[str], bytes | None]) -> dict:
+    def run(self, events: dict[str, str], read: Callable[[str], bytes | None]) -> dict:
         segments = []
-        for url in event_urls:
+        for url in events:
             body = read(url)
             if body is None:
                 continue  # never fetched: the fetch phase logged it
@@ -39,6 +39,10 @@ class Apply:
             except Exception as e:  # the parser is pure: any error is this page's, never the run's
                 self.problem("parse failed", url, error=str(e))
                 continue
+            event.name = event.name or events[url]
+            if not event.name:
+                self.problem("parse failed", url, error="the index has no event name: write it after the URL in events.txt")
+                event.name = event_path(url)
             competition_id = self.competition(url, event)
             seen = set()
             for page in event.segment_pages:

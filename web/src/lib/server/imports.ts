@@ -1,13 +1,16 @@
 import { sql, type Kysely } from 'kysely';
 import type { DB } from './db-types.js';
 
-/** "Import now": queues a `pending` Import for the import service, unless one is already queued. */
-export async function queueImport(db: Kysely<DB>) {
+/**
+ * "Quick Import" or "Full Import": queues a `pending` Import for the import service, unless one is already queued.
+ * A quick Import re-checks only the two newest listed Seasons' ISU pages; a full one every page.
+ */
+export async function queueImport(db: Kysely<DB>, scope: 'quick' | 'full') {
 	await db.transaction().execute(async (trx) => {
 		// Serialises concurrent presses so `not exists` can't race. Not the runner's 'import' lock,
 		// which is held for the whole apply phase.
 		await sql`select pg_advisory_xact_lock(hashtext('import now'))`.execute(trx);
-		await sql`insert into imports (status) select 'pending'
+		await sql`insert into imports (status, scope) select 'pending', ${scope}
 			where not exists (select from imports where status = 'pending')`.execute(trx);
 	});
 }

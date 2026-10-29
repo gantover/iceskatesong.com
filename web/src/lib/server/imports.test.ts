@@ -10,18 +10,23 @@ beforeEach(() => db.deleteFrom('imports').execute());
 const pendingCount = async () =>
 	(await db.selectFrom('imports').where('status', '=', 'pending').select('id').execute()).length;
 
-test('"Import now" queues one pending Import, even when pressed many times at once', async () => {
+test('an Import press queues one pending Import, even when pressed many times at once', async () => {
 	// Open the pool's connections first, so the presses overlap instead of queueing behind connects.
 	await Promise.all(Array.from({ length: 10 }, () => sql`select pg_sleep(0.05)`.execute(db)));
-	await Promise.all(Array.from({ length: 10 }, () => queueImport(db)));
-	await queueImport(db);
+	await Promise.all(Array.from({ length: 10 }, () => queueImport(db, 'full')));
+	await queueImport(db, 'full');
 	expect(await pendingCount()).toBe(1);
 });
 
-test('"Import now" queues behind a running Import', async () => {
+test('an Import press queues behind a running Import', async () => {
 	await db.insertInto('imports').values({ status: 'running' }).execute();
-	await queueImport(db);
+	await queueImport(db, 'full');
 	expect(await pendingCount()).toBe(1);
+});
+
+test('a quick Import is queued and shown as quick', async () => {
+	await queueImport(db, 'quick');
+	expect((await importStatus(db)).current).toMatchObject({ status: 'pending', scope: 'quick' });
 });
 
 test('status shows the current and last Import, and the last one\'s problems grouped by kind', async () => {

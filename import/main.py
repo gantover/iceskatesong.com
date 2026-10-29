@@ -2,6 +2,7 @@
 
 import os
 import pathlib
+import re
 import signal
 import sys
 import time
@@ -31,9 +32,17 @@ class ImportFailed(Exception):
     pass
 
 
-def read_events(events_file: pathlib.Path) -> list[str]:
-    lines = (line.strip() for line in events_file.read_text().splitlines())
-    return [line for line in lines if line and not line.startswith("#")]
+def read_events(events_file: pathlib.Path) -> dict[str, str]:
+    """Each event URL with the name written after it, or "" (most indexes print their name in <title>)."""
+    lines = (line.split(None, 1) for line in events_file.read_text().splitlines())
+    return {words[0]: words[1].strip() if len(words) > 1 else "" for words in lines if words and not words[0].startswith("#")}
+
+
+def recent_events(events: dict[str, str]) -> set[str]:
+    """The event URLs in the two newest seasonYYZZ/ folders listed: the only ones a quick Import re-checks."""
+    seasons = {url: m[1] for url in events if (m := re.search(r"/season(\d{4})/", url))}
+    newest = sorted(set(seasons.values()))[-2:]
+    return {url for url, season in seasons.items() if season in newest}
 
 
 def mark_interrupted(conn) -> None:
@@ -64,17 +73,26 @@ def run(conn, import_id: int, events_file: pathlib.Path, cache_dir: pathlib.Path
             fixes = corrections_file and corrections.load(corrections_file)
         except corrections.Invalid as e:
             raise ImportFailed(f"corrections.yaml: {e}") from e
-        urls = read_events(events_file)
+        events = read_events(events_file)
         fetcher = fetch.Fetcher(conn, cache_dir, f"iceskatesong-import/1.0 ({contact})", interval=interval)
         isu_ids = {value for (value,) in conn.execute("select value from keys where system = 'isu'")}
-        for url in urls:
-            body = fetcher.get(url)
+        (scope,) = conn.execute("select scope from imports where id = %s", [import_id]).fetchone()
+        recheck = events if scope == "full" else recent_events(events)
+
+        def cached_or_fetched(*alternatives):
+            # Past results rarely change: a quick Import reads older events' cached pages, fetching only missing ones.
+            cached = (body for u in alternatives if (body := fetch.read_cached(cache_dir, u)) is not None)
+            return next(cached, None) or fetcher.get(*alternatives)
+
+        for url in events:
+            get = fetcher.get if url in recheck else cached_or_fetched
+            body = get(url)
             try:
                 pages = isu.parse_index(isu.decode(body)).segment_pages if body else []
             except Exception:
                 pages = []  # logged by the apply phase
             for page in pages:
-                body = fetcher.get(*apply.page_urls(url, page))
+                body = get(*apply.page_urls(url, page))
                 try:
                     isu_ids.update(entry.isu_id for entry in isu.parse_segment(isu.decode(body)).entries if entry.isu_id)
                 except Exception:
@@ -96,7 +114,7 @@ def run(conn, import_id: int, events_file: pathlib.Path, cache_dir: pathlib.Path
         with conn.transaction():
             conn.execute(IMPORT_LOCK)
             corrections.revert(conn)  # every step below sees the imported state, as if the file were empty
-            counts = apply.Apply(conn, problems).run(urls, lambda url: fetch.read_cached(cache_dir, url))
+            counts = apply.Apply(conn, problems).run(events, lambda url: fetch.read_cached(cache_dir, url))
             if wikidata_items:
                 counts |= wikidata.apply(conn, wikidata_items, problems)
             if wikipedia_data:

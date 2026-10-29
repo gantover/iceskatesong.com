@@ -44,6 +44,6 @@
 
 **Corrections file**: The repo-kept list of Admin fixes (Piece aliases, Program music, Skater merges, video hides) applied on every Import until the Admin edit screens replace it.
 
-**Import**: One run that pulls new and changed records from the data sources. Started only by the Admin; each Import has a status (pending, running, succeeded, failed).
+**Import**: One run that pulls new and changed records from the data sources. Started only by the Admin, as a **quick** Import (re-checks the ISU results of the two newest Seasons listed, older events from the cache) or a **full** one (every ISU page); each Import has a status (pending, running, succeeded, failed).
 
 _Avoid_: "song" for Piece (many Pieces aren't songs); "routine" for Program; "skate" for Performance; bare "source" for where data comes from (say "data source": Source is the film, musical or ballet a Piece comes from).

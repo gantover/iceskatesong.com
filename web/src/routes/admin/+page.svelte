@@ -31,7 +31,7 @@
 		{#if run}
 			<dl class="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">
 				<dt class="text-muted-foreground">Import</dt>
-				<dd>#{run.id} <strong>{run.status}</strong></dd>
+				<dd>#{run.id} {run.scope} <strong>{run.status}</strong></dd>
 				<dt class="text-muted-foreground">Queued</dt>
 				<dd>{time(run.created_at)}</dd>
 				<dt class="text-muted-foreground">Started</dt>
@@ -75,12 +75,18 @@
 {/snippet}
 
 <main class="mx-auto max-w-3xl space-y-6 p-6">
-	<div class="flex items-center justify-between gap-4">
+	<div class="flex flex-wrap items-center justify-between gap-4">
 		<h1 class="text-2xl font-semibold">Admin</h1>
-		<form method="POST" action="?/importNow" use:enhance>
-			<Button type="submit">Import now</Button>
+		<form method="POST" use:enhance class="flex gap-2">
+			<Button type="submit" formaction="?/quickImport">Quick Import</Button>
+			<Button type="submit" formaction="?/fullImport" variant="outline">Full Import</Button>
 		</form>
 	</div>
+	<p class="text-muted-foreground text-sm">
+		Quick re-checks the ISU results of the two newest Seasons in <code>events.txt</code> and reads older events from
+		the saved pages (about 20 minutes). Full re-checks every ISU page (over an hour): run it now and then, since old
+		results occasionally change.
+	</p>
 
 	{#if data.youtubeStaleSince}
 		<p role="alert" class="border-destructive text-destructive rounded-lg border p-4 text-sm">

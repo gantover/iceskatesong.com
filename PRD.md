@@ -39,7 +39,7 @@ Built and shipped in this order ([In what order do we build data, submissions an
 
 | Release | What visitors get | What the Admin gets |
 |---|---|---|
-| **R1** | Read-only site: every ISU Performance 2004–05 on, official ISU videos, Wikipedia music with match grades, Skater and Piece search | "Import now" button, Import status and problems, fixes via the repo-kept corrections file |
+| **R1** | Read-only site: every ISU Performance 2004–05 on, official ISU videos, Wikipedia music with match grades, Skater and Piece search | "Quick Import" and "Full Import" buttons, Import status and problems, fixes via the repo-kept corrections file |
 | **R2** | "Submit a video" on a Performance, Flags ("Wrong video?", "Wrong music?") | Review Queue, edit screens (reassign, hide, merge, split, edit music), reversible audit log, Block |
 | **R3** | "Suggest music" on a Performance's Program | Music Submissions in the Review Queue, grouped by Program |
 | **R4** | Submit a bare YouTube URL, matched automatically, auto-published above a threshold | (not specified: needs its own wayfinding effort before build) |
@@ -82,8 +82,8 @@ Fully specified in [ADR 0002](docs/adr/0002-data-model-identities-and-correction
 
 One Import pulls every data source in one job ([How does an Import run end to end?][t13]).
 
-- **Trigger**: only the Admin's "Import now" button. It inserts a `pending` row; the long-running `import` service polls every 30 s and claims it atomically, so a double-click can't start two. On startup the service marks any `running` row `failed` ("interrupted"). No schedule.
-- **Fetch phase** (no transaction): validate `corrections.yaml` (invalid → `failed` before crawling); conditional GETs on **every** listed event's index and `SEGxxx` pages (~6k pages; past results do change); Wikidata crosswalk and labels; Wikipedia articles re-downloaded only when their revision changed; the ISU YouTube uploads playlists plus a refresh of cache rows older than 25 days. One request at a time, 1 req/s per host, User-Agent `iceskatesong-import/1.0 (<contact email>)`. Every body is cached gzipped on a volume with a `fetched_pages` row. A fetch that fails 3 times keeps the cached copy and logs a problem.
+- **Trigger**: only the Admin's "Quick Import" or "Full Import" button. It inserts a `pending` row with that scope; the long-running `import` service polls every 30 s and claims it atomically, so a double-click can't start two. On startup the service marks any `running` row `failed` ("interrupted"). No schedule.
+- **Fetch phase** (no transaction): validate `corrections.yaml` (invalid → `failed` before crawling); conditional GETs on the listed events' index and `SEGxxx` pages: a full Import re-checks **every** event (~3.8k pages, about an hour at 1 req/s; past results do change), a quick one only the events in the two newest `seasonYYZZ/` folders listed, reading older events from the cache and fetching only their pages never cached; Wikidata crosswalk and labels; Wikipedia articles re-downloaded only when their revision changed; the ISU YouTube uploads playlists plus a refresh of cache rows older than 25 days. One request at a time, 1 req/s per host, User-Agent `iceskatesong-import/1.0 (<contact email>)`. Every body is cached gzipped on a volume with a `fetched_pages` row. A fetch that fails 3 times keeps the cached copy and logs a problem.
 - **Apply phase** (one Postgres transaction, holding the Import advisory lock): re-parse **all** cached pages, so a parser fix applies without a re-crawl. Order: ISU, names, music, videos, then the corrections file. A page that fails to parse leaves its Segment untouched. After a Segment parses cleanly, its Performances whose key wasn't seen are marked `gone` (hidden, never deleted, cleared if they reappear).
 - **Outcome**: `succeeded` with per-entity counts and a problem count, or `failed` (rolled back) only for systemic errors: invalid corrections file, database error, or more than ~20% of fetches failing.
 - **`import_problems`** rows (step, kind, URL or key, JSON detail) for: fetch failed, parse failed, Team member created, Wikipedia Skater with no crosswalk, Wikipedia row with no Program, music string with no alias match, official video with no Performance match, corrections line with an unknown key, vanished import key. Problems older than the last 10 Imports are pruned.
@@ -166,7 +166,7 @@ Layout A: one page per record, single column, works on mobile ([What do the publ
 
 Under `/admin` in the same web app. Auth by **Cloudflare Access** (owner's email only) plus a fail-closed check of the `Cf-Access-Jwt-Assertion` JWT on every `/admin` request ([Which web framework runs the public site and the Admin panel?][t18]).
 
-- "Import now" button, current and last Import status with counts.
+- "Quick Import" and "Full Import" buttons, current and last Import status with counts.
 - The latest Import's problems grouped by kind.
 - A warning when the oldest YouTube cache row is older than 25 days (the Admin should run an Import; the YouTube ToS requires refresh within 30 days).
 
@@ -242,7 +242,7 @@ Vitest for non-trivial logic in `web` (JWT check, search queries, Admin actions)
 ## Changes from the first draft of this PRD
 
 - Video Submissions **never create** Skaters, Programs or Performances: they only attach to records the ISU results created (ADR 0001). The first draft's "create a new one if there is none" is dropped.
-- Imports run only when the Admin presses "Import now", and re-check every listed event, not a weekly current-season job.
+- Imports run only when the Admin presses a button, not on a schedule. A quick Import re-checks the two newest listed Seasons; a full one, run now and then, every listed event. Re-checking every event on every Import took about 65 of a 78-minute Import (2026-10-29).
 - Music comes mainly from Wikipedia, not from Submissions. Submissions matter most for video.
 
 [map]: https://github.com/gantover/iceskatesong.com/issues/1

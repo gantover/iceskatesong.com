@@ -17,6 +17,9 @@
 # Import tries both). A few Japan-hosted events from 2017–18 to 2023–24 use another vendor's
 # dataNNNN.htm pages instead of SEGnnn.htm (NHK Trophy 2017–2023, GP Final 2017, Worlds 2019
 # and 2023, World Team Trophy 2019–2023, JGP Osaka 2023).
+# An index with an empty <title> (some 2019–20 to 2021–22 events, World Team Trophy 2025) prints its
+# name only in the header image: write the name after its URL, e.g. ".../wtt2025/index.htm  ISU World
+# Team Trophy 2025". The Import logs a parse failed problem for an unnamed one.
 # Events with no results online are noted in a comment under their Season, never as URLs.
 
 # 2004–05
@@ -360,33 +363,33 @@ https://results.isu.org/results/season1920/gpf1920/index.htm
 https://results.isu.org/results/season1920/ec2020/index.htm
 https://results.isu.org/results/season1920/fc2020/index.htm
 https://results.isu.org/results/season1920/wyog2020/index.htm
-https://results.isu.org/results/season1920/wjc2020/index.htm
+https://results.isu.org/results/season1920/wjc2020/index.htm  ISU World Junior Figure Skating Championships 2020
 
 # 2020–21
 #   Skate America, Cup of China and Rostelecom Cup 2020: held, but no results on the ISU host.
 #   Skate Canada, Internationaux de France, Grand Prix Final, the whole JGP series,
 #   European, Four Continents and World Junior Championships: cancelled.
 https://results.isu.org/results/season2021/gpjpn2020/index.htm
-https://results.isu.org/results/season2021/wc2021/index.htm
+https://results.isu.org/results/season2021/wc2021/index.htm  ISU World Figure Skating Championships 2021
 https://results.isu.org/results/season2021/wtt2021/index.htm
 
 # 2021–22
 #   Cup of China replaced by Gran Premio d'Italia. Grand Prix and JGP Final (Osaka): cancelled.
-https://results.isu.org/results/season2122/jgpaut2021/index.htm
-https://results.isu.org/results/season2122/jgpfra2021/index.htm
-https://results.isu.org/results/season2122/jgpfra22021/index.htm
-https://results.isu.org/results/season2122/jgppol2021/index.htm
-https://results.isu.org/results/season2122/jgprus2021/index.htm
-https://results.isu.org/results/season2122/jgpslo2021/index.htm
-https://results.isu.org/results/season2122/jgpsvk2021/index.htm
-https://results.isu.org/results/season2122/gpcan2021/index.htm
-https://results.isu.org/results/season2122/gpfra2021/index.htm
-https://results.isu.org/results/season2122/gpita2021/index.htm
+https://results.isu.org/results/season2122/jgpaut2021/index.htm  ISU JGP Austria 2021
+https://results.isu.org/results/season2122/jgpfra2021/index.htm  ISU JGP France I 2021
+https://results.isu.org/results/season2122/jgpfra22021/index.htm  ISU JGP France II 2021
+https://results.isu.org/results/season2122/jgppol2021/index.htm  ISU JGP Poland 2021
+https://results.isu.org/results/season2122/jgprus2021/index.htm  ISU JGP Russia 2021
+https://results.isu.org/results/season2122/jgpslo2021/index.htm  ISU JGP Slovenia 2021
+https://results.isu.org/results/season2122/jgpsvk2021/index.htm  ISU JGP Slovakia 2021
+https://results.isu.org/results/season2122/gpcan2021/index.htm  ISU GP Skate Canada International 2021
+https://results.isu.org/results/season2122/gpfra2021/index.htm  ISU GP Internationaux de France 2021
+https://results.isu.org/results/season2122/gpita2021/index.htm  ISU GP Gran Premio d'Italia 2021
 https://results.isu.org/results/season2122/gpjpn2021/index.htm
-https://results.isu.org/results/season2122/gprus2021/index.htm
-https://results.isu.org/results/season2122/gpusa2021/index.htm
-https://results.isu.org/results/season2122/ec2022/index.htm
-https://results.isu.org/results/season2122/fc2022/index.htm
+https://results.isu.org/results/season2122/gprus2021/index.htm  ISU GP Rostelecom Cup 2021
+https://results.isu.org/results/season2122/gpusa2021/index.htm  ISU GP Skate America 2021
+https://results.isu.org/results/season2122/ec2022/index.htm  ISU European Figure Skating Championships 2022
+https://results.isu.org/results/season2122/fc2022/index.htm  ISU Four Continents Figure Skating Championships 2022
 https://results.isu.org/results/season2122/owg2022/index.htm
 https://results.isu.org/results/season2122/wjc2022/index.htm
 https://results.isu.org/results/season2122/wc2022/index.htm
@@ -452,7 +455,7 @@ https://results.isu.org/results/season2425/ec2025/index.htm
 https://results.isu.org/results/season2425/fc2025/index.htm
 https://results.isu.org/results/season2425/wjc2025/index.htm
 https://results.isu.org/results/season2425/wc2025/index.htm
-https://results.isu.org/results/season2425/wtt2025/index.htm
+https://results.isu.org/results/season2425/wtt2025/index.htm  ISU World Team Trophy 2025
 
 # 2025–26
 https://results.isu.org/results/season2526/jgpaze2025/index.htm

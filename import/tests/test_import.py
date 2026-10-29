@@ -1,5 +1,6 @@
 import gzip
 import re
+import shutil
 
 import apply
 import fetch
@@ -10,10 +11,10 @@ RHYTHM_DANCE = "results/season2526/gpf2025/SEG007.htm"
 DOMAIN_TABLES = ["competitions", "segments", "skaters", "teams", "programs", "performances", "keys", "names"]
 
 
-def run_import(conn, site, tmp_path, events=(GPF,), wikidata=False, youtube_api=None):
+def run_import(conn, site, tmp_path, events=(GPF,), wikidata=False, youtube_api=None, scope="full"):
     events_file = tmp_path / "events.txt"
     events_file.write_text("# test list\n\n" + "".join(f"{site.url}/{e}\n" for e in events))
-    conn.execute("insert into imports default values")
+    conn.execute("insert into imports (scope) values (%s)", [scope])
     import_id = main.claim(conn)
     site.log.clear()
     endpoint = f"{site.url}/wikidata/sparql" if wikidata else None  # answers every query with the combined fixture
@@ -123,6 +124,43 @@ def test_a_page_that_fails_to_parse_leaves_its_segment_untouched(conn, site, tmp
     assert status == "succeeded"
     assert problems(conn, "parse failed") == [f"{site.url}/{RHYTHM_DANCE}"]
     assert conn.execute("select count(*) from performances where gone").fetchone() == (0,)
+
+
+def test_a_quick_import_rechecks_only_the_two_newest_listed_seasons(conn, site, tmp_path):
+    for season in ("season2425/gpf2024", "season1920/gpf2019"):
+        shutil.copytree(site.root / "results/season2526/gpf2025", site.root / "results" / season)
+    events = (GPF, "results/season2425/gpf2024/index.htm", "results/season1920/gpf2019/index.htm", JGP_2004)  # no Season folder: older
+    run_import(conn, site, tmp_path, events=events)
+    before = snapshot(conn)
+
+    status, _, _ = run_import(conn, site, tmp_path, events=events, scope="quick")
+
+    assert status == "succeeded"
+    assert {path.split("/")[2] for _, path, _ in site.log} == {"season2526", "season2425"}
+    assert snapshot(conn) == before  # the older events are applied from their cached pages
+
+
+def test_a_quick_import_fetches_an_older_event_it_has_never_fetched(conn, site, tmp_path):
+    run_import(conn, site, tmp_path)
+
+    run_import(conn, site, tmp_path, events=(GPF, "results/wc2008/index.htm"), scope="quick")
+
+    assert sorted(path for _, path, status in site.log if status == "200") == ["/results/wc2008/SEG001.HTM", "/results/wc2008/index.htm"]
+
+
+def test_an_index_with_an_empty_title_takes_its_name_from_events_txt(conn, site, tmp_path):
+    # Some FS Manager indexes (2019–20 to 2021–22, World Team Trophy 2025) print the name only in their header image.
+    run_import(conn, site, tmp_path)
+    edit_cached(site, tmp_path, GPF, lambda page: re.sub(r"(?is)<title>.*?</title>", "<title></title>", page))
+    name = "select name from competitions"
+
+    run_import(conn, site, tmp_path, events=(f"{GPF}  ISU GP Final 2025 ",))
+    assert conn.execute(name).fetchone() == ("ISU GP Final 2025",)
+    assert problems(conn, "parse failed") == []
+
+    run_import(conn, site, tmp_path)
+    assert conn.execute(name).fetchone() == ("season2526/gpf2025",)  # never blank: the event path stands in
+    assert problems(conn, "parse failed") == [f"{site.url}/{GPF}"]
 
 
 def test_two_spellings_of_one_isu_id_are_one_skater(conn, site, tmp_path):
