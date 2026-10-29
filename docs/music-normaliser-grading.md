@@ -62,6 +62,12 @@ concertos. The final matcher preserves the most specific named work from
 fuzzy title or a model pair verdict. The two distinct variations are therefore
 not counted as a missed duplicate in the final assessment.
 
+The first production Import failed in its apply transaction: a Wikipedia music
+title linked to Sergei Rachmaninoff's article, so the Piece took his QID, which
+was already his artist key. A title-link QID that is a composer of another
+fetched work now names the person, not the work: the occurrence keeps its text
+credits and is not identified, and Pieces linked that way no longer join by it.
+
 ## Runtime checks
 
 The integration tests cover ordered graded occurrences, independent grades,

@@ -145,6 +145,20 @@ def test_identified_composers_come_from_wikidata_not_the_cover_credit(conn, tmp_
     assert conn.execute("select entity from keys where system = 'wikidata' and value = 'Q456'").fetchone() == ("artist",)
 
 
+def test_a_title_linked_to_its_composers_article_is_not_identified_as_that_composer(conn, tmp_path, site):
+    # Production Import #1: "Vocalise" linked to Sergei Rachmaninoff's article, whose QID was already his artist key.
+    work, _ = import_claim(conn, tmp_path, "Rhapsody by Rachmaninoff")
+    sloppy, _ = import_claim(conn, tmp_path, "Vocalise by Rachmaninoff")
+    conn.execute("update music_claims set title_qids = %s where program_id = %s", [Jsonb({"Rhapsody": "Q123"}), work])
+    conn.execute("update music_claims set title_qids = %s where program_id = %s", [Jsonb({"Vocalise": "Q456"}), sloppy])
+    (site.root / "entities").write_text(json.dumps({"entities": {
+        "Q123": {"claims": {"P86": [{"mainsnak": {"datavalue": {"value": {"id": "Q456"}}}}]}},
+        "Q456": {"labels": {"en": {"value": "Sergei Rachmaninoff"}}}}}))
+    run_import(conn, tmp_path, entity_endpoint=site.url + "/entities")
+    assert conn.execute("select entity from keys where system = 'wikidata' and value = 'Q456'").fetchall() == [("artist",)]
+    assert conn.execute("""select o.grade from music_occurrences o where o.program_id = %s""", [sloppy]).fetchone() == ("credited",)
+
+
 def test_existing_piece_and_artist_keys_are_reused_and_title_only_grade_stays_local(conn, tmp_path):
     artist = conn.execute("insert into artists (name) values ('Composer') returning id").fetchone()[0]
     piece = conn.execute("insert into pieces (title) values ('Tango') returning id").fetchone()[0]

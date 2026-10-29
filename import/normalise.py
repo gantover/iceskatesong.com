@@ -80,6 +80,8 @@ def resolve(raw, parsed, title_qids, entities):
     if not title_in_text(title, raw):
         return None
     qid = next((qid for label, qid in title_qids.items() if norm(label) == norm(title)), None)
+    if entities.get(qid, {}).get("person"):
+        qid = None
     composers = [{"name": name, "qid": None} for name in parsed.get("composers", []) if in_text(name, raw)]
     source = parsed.get("source") if in_text(parsed.get("source"), raw) else None
     grade = "identified" if qid else "credited" if composers or source else "title only"
@@ -236,6 +238,9 @@ def fetch_composers(fetcher, endpoint, qids, problems):
             problem(problems, "music composer label missing", qid)
             continue
         result[qid] = {"composers": names}
+    # A title linked to its composer's article names the person, not the work; that QID is the artist's key.
+    for qid in result.keys() & {c["qid"] for work in result.values() for c in work["composers"]}:
+        result[qid] = {"composers": [], "person": True}
     return result
 
 
